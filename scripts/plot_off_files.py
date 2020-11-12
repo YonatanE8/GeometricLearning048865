@@ -1,10 +1,8 @@
-from HW1.utils.io import read_off
-from HW1 import PROJECT_ROOT
+from src.HW1 import read_off
+from src.HW1 import PROJECT_ROOT
 
 import matplotlib
 matplotlib.use('TkAgg')
-
-from mpl_toolkits.mplot3d import Axes3D
 
 import os
 import glob

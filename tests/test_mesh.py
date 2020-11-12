@@ -1,6 +1,6 @@
-from HW1.utils.io import read_off
-from HW1.utils.mesh import Mesh
-from HW1 import PROJECT_ROOT
+from src.HW1.utils.io import read_off
+from src.HW1.utils.mesh import Mesh
+from src import PROJECT_ROOT
 
 import os
 import glob
@@ -32,7 +32,7 @@ class TestMesh:
         ]
 
     def test_mesh_init(self):
-        data_dir = os.path.join(PROJECT_ROOT, 'HW1', 'data', 'example_off_files')
+        data_dir = os.path.join(PROJECT_ROOT, 'data', 'example_off_files')
         file = glob.glob(os.path.join(data_dir, '*.off'))[0]
 
         # Load a mesh using read_off and using the Mesh class and assert that they

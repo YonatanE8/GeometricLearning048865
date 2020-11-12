@@ -1,5 +1,5 @@
-from HW1.utils.io import write_off, read_off
-from HW1 import PROJECT_ROOT
+from src.HW1.utils.io import write_off, read_off
+from src import PROJECT_ROOT
 
 import os
 import glob
@@ -10,7 +10,7 @@ import numpy as np
 
 @pytest.fixture
 def reference_off_files():
-    data_dir = os.path.join(PROJECT_ROOT, 'HW1', 'data', 'example_off_files')
+    data_dir = os.path.join(PROJECT_ROOT, 'data', 'example_off_files')
     files = glob.glob(os.path.join(data_dir, '*.off'))
 
     return files
@@ -33,7 +33,7 @@ class TestOffIO:
 
     def test_write_off(self, reference_off_files):
         # Make temporary dir to write data into
-        tmp_dir = os.path.join(PROJECT_ROOT, 'HW1', 'data', 'TMP_DIR')
+        tmp_dir = os.path.join(PROJECT_ROOT, 'data', 'TMP_DIR')
         os.makedirs(tmp_dir, exist_ok=True)
         temp_file = os.path.join(tmp_dir, 'tmp_file.off')
 

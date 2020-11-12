@@ -1,5 +1,5 @@
 from abc import ABC
-from HW1.utils.io import read_off
+from src.HW1.utils.io import read_off
 
 import numpy as np
 import pyvista as pv
