@@ -1,5 +1,5 @@
-from src.HW1 import read_off
-from src.HW1 import PROJECT_ROOT
+from src.HW1.utils.io import read_off
+from src import PROJECT_ROOT
 
 import matplotlib
 matplotlib.use('TkAgg')
@@ -10,7 +10,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-data_dir = os.path.join(PROJECT_ROOT, 'HW1', 'data', 'example_off_files')
+data_dir = os.path.join(PROJECT_ROOT, 'data', 'example_off_files')
 file = glob.glob(os.path.join(data_dir, '*.off'))[0]
 data = read_off(file)
 vertices = data[0]
