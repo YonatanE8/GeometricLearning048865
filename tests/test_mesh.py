@@ -108,5 +108,36 @@ class TestMesh:
         assert Vd.shape == (len(self.vertices), )
         assert np.sum(Vd - Vd_gt) == 0
 
+    def test_faces_normals(self, vertices_setup):
+        mesh = Mesh()
+        mesh.v = self.vertices
+        mesh.f = self.faces
+
+        normals = mesh.faces_normals(unit_norm=False)
+        normed_normals = mesh.faces_normals(unit_norm=True)
+        norms = np.sqrt(np.sum(np.power(normed_normals, 2), 1)).tolist()
+
+        assert normals.shape == (len(mesh.f), 3)
+        assert normed_normals.shape == (len(mesh.f), 3)
+        for norm in norms:
+            pytest.approx(norm, 1.0, 1e-3)
+
+        # directions = np.array([
+        #     [0, 0, -1],
+        #     [0, -1, 0],
+        #     [1, 0, 0],
+        #     [0, 1, 0],
+        #     [-1, 0, 0],
+        #     [0, 0, 1],
+        # ])
+        #
+        # normals = normals.astype(np.int)
+        # normed_normals = normed_normals.astype(np.int)
+        #
+        # assert np.sum(directions - normals) == 0
+        # assert np.sum(directions - normed_normals) == 0
+
+
+
 
 

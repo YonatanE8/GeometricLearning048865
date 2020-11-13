@@ -29,7 +29,7 @@ class Mesh(ABC):
         self.Avv = None
         self.vertices_degree = None
 
-    def vertex_face_adjacency(self):
+    def vertex_face_adjacency(self) -> sparse.coo_matrix:
         """
         This method computes a boolean vertex - face adjacency matrix 'A',
         describing the one ring neighbors of each vertice,
@@ -53,7 +53,7 @@ class Mesh(ABC):
 
         return self.Avf
 
-    def vertex_vertex_adjacency(self):
+    def vertex_vertex_adjacency(self) -> sparse.coo_matrix:
         """
         This method computes a boolean vertex - vertex adjacency matrix 'A',
         describing connected vertices of each vertice,
@@ -72,7 +72,7 @@ class Mesh(ABC):
 
         return self.Avv
 
-    def vertex_degree(self):
+    def vertex_degree(self) -> np.ndarray:
         """
         This method computes the vertex-degree for all vertices.
 
@@ -86,7 +86,7 @@ class Mesh(ABC):
 
         return self.vertices_degree
 
-    def render_wireframe(self):
+    def render_wireframe(self) -> None:
         """
         Render the mesh's vertices in wireframe view using the PyVista package
 
@@ -101,8 +101,98 @@ class Mesh(ABC):
         mesh = pv.PolyData(vertices, faces)
 
         plotter = pv.Plotter()
-        plotter.add_mesh(mesh, style='points')
+        plotter.add_mesh(mesh, style='wireframe')
         plotter.show()
+
+    def render_pointcloud(self, scalar_func: str = 'degree') -> None:
+        """
+        Render the mesh's vertices in point cloud view using the PyVista package
+
+        :param scalar_func: (str) A function $f: \set{R}^{3} -> \set{R}$
+        indicating the scalar value to use as color for the point-cloud visualization.
+        Options are: 'degree' - uses the vertex's degree,
+        and 'coo' - uses the coordinates RMS value. Defaults to 'degree'.
+        :return:
+        """
+
+        # Validate input
+        assert scalar_func in ('degree', 'coo'), \
+            "'scalar_func' must be either 'degree' or 'coo'"
+
+        x = np.expand_dims(np.array([v[0] for v in self.v]), 1)
+        y = np.expand_dims(np.array([v[1] for v in self.v]), 1)
+        z = np.expand_dims(np.array([v[2] for v in self.v]), 1)
+        vertices = np.concatenate((x, y, z), 1)
+        faces = np.concatenate([np.expand_dims(f, 1) for f in self.f], 1)
+        mesh = pv.PolyData(vertices, faces)
+
+        colors = None
+        if scalar_func == 'degree':
+            colors = self.v
+
+        elif scalar_func == 'coo':
+            colors = np.sqrt(np.sum(np.power(vertices, 2), 1))
+
+        plotter = pv.Plotter()
+        plotter.add_mesh(mesh, style='points', cmap='hot',
+                         render_points_as_spheres=True, scalars=colors)
+        plotter.show()
+
+    def render_surface(self, scalar_func: str) -> None:
+        """
+        Render the mesh surface using the PyVista package
+
+        :param scalar_func: (str) A function $f: \set{R}^{3} -> \set{R}$
+        indicating the scalar value to use as color for the point-cloud visualization.
+        Options are: 'degree' - uses the vertex's degree,
+        and 'coo' - uses the coordinates RMS value. Defaults to 'degree'.
+        :return:
+        """
+
+        pass
+
+    def faces_normals(self, unit_norm: bool = True) -> np.ndarray:
+        """
+        A method for computing the 'outward-facing' normal vectors of each face in
+        the mesh.
+
+        :param unit_norm: (bool) Whether to normalize the computed normals to have an
+        L2 norm of 1.
+
+        :return: (np.ndarray) A NumPy array of shape (|F|, 3), containing the
+        computed normals
+        """
+
+        # Get the face adjacency matrix
+        Afv = np.array(self.vertex_face_adjacency().todense())
+        n_faces = len(self.f)
+
+        # For each face, get two connected vertices
+        vertices_inds = [np.where(Afv[:, f] == 1)[0] for f in range(n_faces)]
+
+        # Compute the normal vector for each face using the detected vertices
+        normals = np.concatenate([np.expand_dims(np.cross(
+            (np.array(self.v[vertices[1]]) - np.array(self.v[vertices[0]])),
+            (np.array(self.v[vertices[2]]) - np.array(self.v[vertices[0]])),
+        ), 0)
+            for vertices in vertices_inds], 0).astype(np.float)
+
+        if unit_norm:
+            norms = np.linalg.norm(normals, axis=1, keepdims=True)
+            normals /= norms
+
+        normals = np.abs(normals)
+
+        return normals
+
+
+
+
+
+
+
+
+
 
 
 
