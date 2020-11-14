@@ -29,6 +29,31 @@ class Mesh(ABC):
         self.Avv = None
         self.vertices_degree = None
 
+    def _get_vertices_array(self):
+        """
+        Utility method for gathering all vertices into a single NumPy array
+        """
+
+        vertices = np.array(self.v)
+
+        return vertices
+
+    def _get_faces_array(self):
+        """
+        Utility method for gathering all faces into a single NumPy array
+        """
+
+        faces = np.array(self.f)
+        faces = np.concatenate(
+            (
+                np.expand_dims(len(self.f[0]) * np.ones((len(self.f)), ),
+                               1).astype(np.int),
+                faces
+            ), 1
+        )
+
+        return faces
+
     def vertex_face_adjacency(self) -> sparse.coo_matrix:
         """
         This method computes a boolean vertex - face adjacency matrix 'A',
@@ -93,11 +118,8 @@ class Mesh(ABC):
         :return: None
         """
 
-        x = np.expand_dims(np.array([v[0] for v in self.v]), 1)
-        y = np.expand_dims(np.array([v[1] for v in self.v]), 1)
-        z = np.expand_dims(np.array([v[2] for v in self.v]), 1)
-        vertices = np.concatenate((x, y, z), 1)
-        faces = np.concatenate([np.expand_dims(f, 1) for f in self.f], 1)
+        vertices = self._get_vertices_array()
+        faces = self._get_faces_array()
         mesh = pv.PolyData(vertices, faces)
 
         plotter = pv.Plotter()
@@ -119,12 +141,8 @@ class Mesh(ABC):
         assert scalar_func in ('degree', 'coo'), \
             "'scalar_func' must be either 'degree' or 'coo'"
 
-        x = np.expand_dims(np.array([v[0] for v in self.v]), 1)
-        y = np.expand_dims(np.array([v[1] for v in self.v]), 1)
-        z = np.expand_dims(np.array([v[2] for v in self.v]), 1)
-        vertices = np.concatenate((x, y, z), 1)
-        faces = np.concatenate([np.expand_dims(f, 1) for f in self.f], 1)
-        mesh = pv.PolyData(vertices, faces)
+        vertices = self._get_vertices_array()
+        faces = self._get_faces_array()
 
         colors = None
         if scalar_func == 'degree':
@@ -133,6 +151,7 @@ class Mesh(ABC):
         elif scalar_func == 'coo':
             colors = np.sqrt(np.sum(np.power(vertices, 2), 1))
 
+        mesh = pv.PolyData(vertices, faces)
         plotter = pv.Plotter()
         plotter.add_mesh(mesh, style='points', cmap='hot',
                          render_points_as_spheres=True, scalars=colors)
@@ -149,7 +168,15 @@ class Mesh(ABC):
         :return:
         """
 
-        pass
+        vertices = self._get_vertices_array()
+        faces = self._get_faces_array()
+
+
+        mesh = pv.PolyData(vertices, faces)
+
+        plotter = pv.Plotter()
+        plotter.add_mesh(mesh, style='surface')
+        plotter.show()
 
     def faces_normals(self, unit_norm: bool = True) -> np.ndarray:
         """

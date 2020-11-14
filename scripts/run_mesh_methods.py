@@ -10,3 +10,7 @@ file = glob.glob(os.path.join(data_dir, '*.off'))[0]
 
 mesh = Mesh(file)
 mesh.render_wireframe()
+mesh.render_pointcloud(scalar_func='degree')
+mesh.render_pointcloud(scalar_func='coo')
+
+
