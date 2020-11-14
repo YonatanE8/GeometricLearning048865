@@ -171,7 +171,6 @@ class Mesh(ABC):
         vertices = self._get_vertices_array()
         faces = self._get_faces_array()
 
-
         mesh = pv.PolyData(vertices, faces)
 
         plotter = pv.Plotter()
