@@ -146,7 +146,7 @@ class Mesh(ABC):
 
         colors = None
         if scalar_func == 'degree':
-            colors = self.v
+            colors = np.sum(np.array(self.vertex_vertex_adjacency().todense()), 1)
 
         elif scalar_func == 'coo':
             colors = np.sqrt(np.sum(np.power(vertices, 2), 1))
@@ -157,7 +157,7 @@ class Mesh(ABC):
                          render_points_as_spheres=True, scalars=colors)
         plotter.show()
 
-    def render_surface(self, scalar_func: str) -> None:
+    def render_surface(self, scalar_func: str = 'inds') -> None:
         """
         Render the mesh surface using the PyVista package
 
@@ -168,13 +168,24 @@ class Mesh(ABC):
         :return:
         """
 
+        # Validate input
+        assert scalar_func in ('degree', 'coo'), \
+            "'scalar_func' must be either 'degree' or 'coo'"
+
         vertices = self._get_vertices_array()
         faces = self._get_faces_array()
 
-        mesh = pv.PolyData(vertices, faces)
+        colors = None
+        if scalar_func == 'inds':
+            colors = np.sum(faces, 1)
 
+        elif scalar_func == 'coo':
+            colors = np.sqrt(np.sum(np.power(vertices, 2), 1))
+
+        mesh = pv.PolyData(vertices, faces)
         plotter = pv.Plotter()
-        plotter.add_mesh(mesh, style='surface')
+        plotter.add_mesh(mesh, style='surface', cmap='hot',
+                         scalars=colors)
         plotter.show()
 
     def faces_normals(self, unit_norm: bool = True) -> np.ndarray:
@@ -210,16 +221,3 @@ class Mesh(ABC):
         normals = np.abs(normals)
 
         return normals
-
-
-
-
-
-
-
-
-
-
-
-
-
