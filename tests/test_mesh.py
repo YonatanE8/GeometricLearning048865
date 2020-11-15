@@ -12,45 +12,40 @@ class TestMesh:
     @pytest.fixture()
     def vertices_setup(self):
         self.vertices = [
-            [0, 0, 0],
-            [1, 0, 0],
-            [1, 1, 0],
             [0, 1, 0],
-            [0, 0, 1],
-            [1, 0, 1],
-            [1, 1, 1],
+            [0, 1, 0.5],
             [0, 1, 1],
+            [0.5, 1, 1],
+            [1, 1, 1],
+            [1, 1, 0.5],
+            [1, 1, 0],
+            [0.5, 1, 0],
+            [0, 0, 0],
+            [0, 0, 1],
+            [0.5, 0, 1],
+            [1, 0, 1],
+            [1, 0, 0],
         ]
 
         self.faces = [
-            [0, 1, 2, 3],
-            [0, 1, 4, 5],
-            [1, 2, 5, 6],
-            [2, 3, 6, 7],
-            [0, 3, 4, 7],
-            [4, 5, 6, 7],
-        ]
-
-    @pytest.fixture()
-    def triangular_vertices_setup(self):
-        self.vertices = [
-            [0, 0, 0],
-            [1, 0, 0],
-            [1, 1, 0],
-            [0, 1, 0],
-            [0, 0, 1],
-            [1, 0, 1],
-            [1, 1, 1],
-            [0, 1, 1],
-        ]
-
-        self.faces = [
-            [0, 1, 2, 3],
-            [0, 1, 4, 5],
-            [1, 2, 5, 6],
-            [2, 3, 6, 7],
-            [0, 3, 4, 7],
-            [4, 5, 6, 7],
+            [0, 3, 6],
+            [0, 2, 3],
+            [3, 6, 4],
+            [8, 1, 9],
+            [0, 1, 8],
+            [1, 2, 9],
+            [2, 3, 9],
+            [9, 3, 11],
+            [3, 4, 11],
+            [4, 11, 5],
+            [11, 5, 12],
+            [5, 12, 6],
+            [6, 7, 12],
+            [7, 8, 12],
+            [0, 8, 7],
+            [8, 9, 10],
+            [8, 10, 12],
+            [10, 11, 12],
         ]
 
     def test_mesh_init(self):
@@ -88,10 +83,14 @@ class TestMesh:
 
         assert a.shape == (len(self.vertices), len(self.faces))
 
-        cols = np.array([0, 1, 4, 0, 1, 2, 0, 2, 3, 0, 3, 4, 1, 4, 5,
-                         1, 2, 5, 2, 3, 5, 3, 4, 5], dtype=np.int32)
-        rows = np.array([0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 4, 4, 4,
-                         5, 5, 5, 6, 6, 6, 7, 7, 7], dtype=np.int32)
+        cols = np.array([0, 1, 4, 14, 3, 4, 5, 1, 5, 6, 0, 1, 2, 6, 7, 8, 2,
+                         8, 9, 9, 10, 11, 0, 2, 11, 12, 12, 13, 14, 3, 4, 13, 14, 15,
+                         16, 3, 5, 6, 7, 15, 15, 16, 17, 7, 8, 9, 10, 17, 10, 11, 12,
+                         13, 16, 17], dtype=np.int32)
+        rows = np.array([0, 0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3, 3, 3, 3, 3, 4,
+                         4, 4, 5, 5, 5, 6, 6, 6, 6, 7, 7, 7, 8, 8, 8, 8, 8,
+                         8, 9, 9, 9, 9, 9, 10, 10, 10, 11, 11, 11, 11, 11, 12, 12, 12,
+                         12, 12, 12], dtype=np.int32)
 
         assert all(a.col == cols)
         assert all(a.row == rows)
@@ -105,17 +104,42 @@ class TestMesh:
 
         assert Avv.shape == (len(self.vertices), len(self.vertices))
 
-        Avv_gt = np.array([[False, True, False, True, True, False, False, False],
-                           [True, False, True, False, False, True, False, False],
-                           [False, True, False, True, False, False, True, False],
-                           [True, False, True, False, False, False, False, True],
-                           [True, False, False, False, False, True, False, True],
-                           [False, True, False, False, True, False, True, False],
-                           [False, False, True, False, False, True, False, True],
-                           [False, False, False, True, True, False, True, False]])
+        Avv_gt = np.array([[False, False, False, True, False, False, False, False, True,
+                            False, False, False, False],
+                           [False, False, False, False, False, False, False, False,
+                            True,
+                            True, False, False, False],
+                           [False, False, False, True, False, False, False, False,
+                            False,
+                            True, False, False, False],
+                           [True, False, True, False, True, False, True, False, False,
+                            True, False, True, False],
+                           [False, False, False, True, False, False, False, False,
+                            False,
+                            False, False, True, False],
+                           [False, False, False, False, False, False, False, False,
+                            False,
+                            False, False, True, True],
+                           [False, False, False, True, False, False, False, False,
+                            False,
+                            False, False, False, True],
+                           [False, False, False, False, False, False, False, False,
+                            True,
+                            False, False, False, True],
+                           [True, True, False, False, False, False, False, True, False,
+                            True, True, False, True],
+                           [False, True, True, True, False, False, False, False, True,
+                            False, False, False, False],
+                           [False, False, False, False, False, False, False, False,
+                            True,
+                            False, False, False, True],
+                           [False, False, False, True, True, True, False, False, False,
+                            False, False, False, True],
+                           [False, False, False, False, False, True, True, True, True,
+                            False, True, True, False]])
 
         assert np.sum(1 - (np.array(Avv.todense()) ==
-                           Avv_gt).reshape((-1, )).astype(np.int)) == 0
+                           Avv_gt).reshape((-1,)).astype(np.int)) == 0
 
         assert np.sum(np.diag(np.array(Avv.todense()).astype(np.int))) == 0
 
@@ -125,9 +149,11 @@ class TestMesh:
         mesh.f = self.faces
 
         Vd = mesh.vertex_degree()
-        Vd_gt = np.array([3, ] * len(self.vertices))
+        Vd_gt = np.array(
+            [2, 2, 2, 6, 2, 2, 2, 2, 6, 4, 2, 4, 6]
+        )
 
-        assert Vd.shape == (len(self.vertices), )
+        assert Vd.shape == (len(self.vertices),)
         assert np.sum(Vd - Vd_gt) == 0
 
     def test_faces_normals(self, vertices_setup):
@@ -164,15 +190,12 @@ class TestMesh:
         mesh.v = self.vertices
         mesh.f = self.faces
 
-    def test_areas(self, triangular_vertices_setup):
+    def test_areas(self, vertices_setup):
         mesh = Mesh()
         mesh.v = self.vertices
         mesh.f = self.faces
 
-    def test_barycenters_areas(self, triangular_vertices_setup):
+    def test_barycenters_areas(self, vertices_setup):
         mesh = Mesh()
         mesh.v = self.vertices
         mesh.f = self.faces
-
-
-
