@@ -251,7 +251,7 @@ class Mesh(ABC):
         computed barycenters
         """
 
-        # Get the coordinates of all vertices for eac face
+        # Get the coordinates of all vertices for each face
         faces = np.array(self.f)
         faces_vertices = np.array(self.v)
         faces_vertices = np.array([
@@ -275,5 +275,101 @@ class Mesh(ABC):
         """
 
         return self._faces_barycenters()
+
+    def _faces_areas(self) -> np.ndarray:
+        """
+        A utility method for computing the area of each face using Heron's formula
+
+        :return: (np.ndarray) A NumPy array of shape (|F|, ), containing the
+        computed areas
+        """
+
+        # Get the coordinates of all vertices for each face
+        vertices = np.array(self.v)
+        faces = np.array(self.f)
+        faces_vertices = [
+            (
+                vertices[faces[f][0], :],
+                vertices[faces[f][1], :],
+                vertices[faces[f][2], :],
+            )
+            for f in range(faces.shape[0])]
+        triangles = np.concatenate([
+            np.expand_dims(np.array((
+                np.sqrt(np.power((tri[0] - tri[1]), 2)),
+                np.sqrt(np.power((tri[0] - tri[2]), 2)),
+                np.sqrt(np.power((tri[1] - tri[2]), 2)),
+            )), 0)
+            for tri in faces_vertices
+        ], 0)
+
+        # Compute the s term from Heron's formula for all triangles
+        s = np.sum(triangles, 1) / 2
+
+        # Compute the area of each face
+        areas = np.array([
+            np.sqrt(
+                (s[t] *
+                 (s[t] - triangles[t, 0]) *
+                 (s[t] - triangles[t, 1]) *
+                 (s[t] - triangles[t, 2]))
+            )
+            for t, tri in enumerate(triangles)
+            ])
+
+        return areas
+
+    @property
+    def areas(self) -> np.ndarray:
+        """
+        A mesh property, containing the area of each face in the mesh
+
+        :return: (np.ndarray) A NumPy array of shape (|F|, ), containing the
+        computed areas
+        """
+
+        return self._faces_areas()
+
+    def _vertices_barycenters_areas(self) -> np.ndarray:
+        """
+        A utility method for computing the barycenter area of each vertex in the mesh
+
+        :return: (np.ndarray) A NumPy array of shape (|V|, ), containing the
+        computed barycenter areas
+        """
+
+        # Get the vertex-face adjacency matrix
+        n_vertices = len(self.v)
+        Avf = np.array(self.vertex_face_adjacency().todense())
+
+        # Get faces matrix
+        faces = self._get_faces_array()
+
+        # Get the faces areas matrix
+        faces_areas = self.areas
+
+        # Compute the barycenter area for each vertex based on all adjacent faces
+        # which are triangular
+        areas = np.array([
+            ((1 / 3) * np.sum([faces_areas[face_ind]
+                               for face_ind in Avf[i, :] if faces[face_ind, 0] == 3]))
+            for i in range(n_vertices)
+        ])
+
+        return areas
+
+    @property
+    def barycenters_areas(self) -> np.ndarray:
+        """
+        A mesh property, containing the barycenter area of each vertex in the mesh
+
+        :return: (np.ndarray) A NumPy array of shape (|V|, ), containing the
+        computed barycenter areas
+        """
+
+        return self._vertices_barycenters_areas()
+
+
+
 
 

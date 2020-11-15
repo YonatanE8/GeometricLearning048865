@@ -31,6 +31,28 @@ class TestMesh:
             [4, 5, 6, 7],
         ]
 
+    @pytest.fixture()
+    def triangular_vertices_setup(self):
+        self.vertices = [
+            [0, 0, 0],
+            [1, 0, 0],
+            [1, 1, 0],
+            [0, 1, 0],
+            [0, 0, 1],
+            [1, 0, 1],
+            [1, 1, 1],
+            [0, 1, 1],
+        ]
+
+        self.faces = [
+            [0, 1, 2, 3],
+            [0, 1, 4, 5],
+            [1, 2, 5, 6],
+            [2, 3, 6, 7],
+            [0, 3, 4, 7],
+            [4, 5, 6, 7],
+        ]
+
     def test_mesh_init(self):
         data_dir = os.path.join(PROJECT_ROOT, 'data', 'example_off_files')
         file = glob.glob(os.path.join(data_dir, '*.off'))[0]
@@ -137,7 +159,20 @@ class TestMesh:
         # assert np.sum(directions - normals) == 0
         # assert np.sum(directions - normed_normals) == 0
 
+    def test_barycenters(self, vertices_setup):
+        mesh = Mesh()
+        mesh.v = self.vertices
+        mesh.f = self.faces
 
+    def test_areas(self, triangular_vertices_setup):
+        mesh = Mesh()
+        mesh.v = self.vertices
+        mesh.f = self.faces
+
+    def test_barycenters_areas(self, triangular_vertices_setup):
+        mesh = Mesh()
+        mesh.v = self.vertices
+        mesh.f = self.faces
 
 
 
