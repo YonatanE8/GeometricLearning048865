@@ -11,11 +11,12 @@ class Mesh(ABC):
     A class describing a mesh via its vertices & faces
     """
 
-    def __init__(self, mesh_file: str = None):
+    def __init__(self, mesh_file: str = None, normals_unit_norm: bool = True):
         """
         Initialize the mesh from a file
-
         :param mesh_file: (str) Path to the '.off' file from which to load the mesh.
+        :param normals_unit_norm: (bool) Whether to normalize the computed normals
+        to have an L2 norm of 1.
         """
 
         # In order to allow instantiating the Mesh class without supplying a file
@@ -24,6 +25,8 @@ class Mesh(ABC):
 
             self.v = data[0]
             self.f = data[1]
+
+        self.unit_norm = normals_unit_norm
 
         self.Avf = None
         self.Avv = None
@@ -169,8 +172,8 @@ class Mesh(ABC):
         """
 
         # Validate input
-        assert scalar_func in ('degree', 'coo'), \
-            "'scalar_func' must be either 'degree' or 'coo'"
+        assert scalar_func in ('inds', 'degree', 'coo'), \
+            "'scalar_func' must be either 'inds', 'degree' or 'coo'"
 
         vertices = self._get_vertices_array()
         faces = self._get_faces_array()
@@ -179,8 +182,17 @@ class Mesh(ABC):
         if scalar_func == 'inds':
             colors = np.sum(faces, 1)
 
+        elif scalar_func == 'degree':
+            colors = np.sum(np.array(self.vertex_vertex_adjacency().todense()), 1)
+
         elif scalar_func == 'coo':
             colors = np.sqrt(np.sum(np.power(vertices, 2), 1))
+
+        # If using vertex-coloring function, interpolate colors for all faces
+        if scalar_func in ('degree', 'coo'):
+            colors = np.array([
+                np.mean(colors[faces[f, 1:]]) for f in range(faces.shape[0])
+            ])
 
         mesh = pv.PolyData(vertices, faces)
         plotter = pv.Plotter()
@@ -188,13 +200,10 @@ class Mesh(ABC):
                          scalars=colors)
         plotter.show()
 
-    def faces_normals(self, unit_norm: bool = True) -> np.ndarray:
+    def _faces_normals(self) -> np.ndarray:
         """
-        A method for computing the 'outward-facing' normal vectors of each face in
+        A utility method for computing the 'outward-facing' normal vectors of each face in
         the mesh.
-
-        :param unit_norm: (bool) Whether to normalize the computed normals to have an
-        L2 norm of 1.
 
         :return: (np.ndarray) A NumPy array of shape (|F|, 3), containing the
         computed normals
@@ -214,10 +223,57 @@ class Mesh(ABC):
         ), 0)
             for vertices in vertices_inds], 0).astype(np.float)
 
-        if unit_norm:
+        if self.unit_norm:
             norms = np.linalg.norm(normals, axis=1, keepdims=True)
             normals /= norms
 
         normals = np.abs(normals)
 
         return normals
+
+    @property
+    def normals(self) -> np.ndarray:
+        """
+        A mesh property, containing the normals of each face in the mesh
+
+        :return: (np.ndarray) A NumPy array of shape (|F|, 3), containing the
+        computed normals
+        """
+
+        return self._faces_normals()
+
+    def _faces_barycenters(self) -> np.ndarray:
+        """
+        A utility method for computing the 'barycenter' of each face, i.e. the mean
+        of the vertices composing each face
+
+        :return: (np.ndarray) A NumPy array of shape (|F|, ), containing the
+        computed barycenters
+        """
+
+        # Get the coordinates of all vertices for eac face
+        faces = np.array(self.f)
+        faces_vertices = np.array(self.v)
+        faces_vertices = np.array([
+            np.expand_dims([faces_vertices[faces[f, :]]], 0)
+            for f in range(faces.shape[0])
+        ])
+        faces_vertices = np.concatenate(faces_vertices, 0)
+
+        # Compute the barycenters
+        barycenters = np.mean(faces_vertices, 1)
+
+        return barycenters
+
+    @property
+    def barycenters(self) -> np.ndarray:
+        """
+        A mesh property, containing the barycenters of each face in the mesh
+
+        :return: (np.ndarray) A NumPy array of shape (|F|, ), containing the
+        computed barycenters
+        """
+
+        return self._faces_barycenters()
+
+
