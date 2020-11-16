@@ -197,3 +197,9 @@ class TestMesh:
         mesh = Mesh()
         mesh.v = self.vertices
         mesh.f = self.faces
+
+    def test_vertex_normals(self, vertices_setup):
+        pass
+
+    def test_gaussian_curvature(self, vertices_setup):
+        pass
