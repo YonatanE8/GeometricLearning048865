@@ -50,15 +50,21 @@ n_points = 20000
 interval = curves.Astroid().get_interval(start=start, end=end, n_points=n_points)
 save_path = os.path.join(PROJECT_ROOT, 'data', 'images')
 os.makedirs(save_path, exist_ok=True)
-save_path = os.path.join(save_path, 'Hypotrochoid.png')
+save_path = os.path.join(save_path, 'Astroid.png')
 
 a_params = [-5, -2, -1, -0.5, 0.5, 1, 2, 5]
 b_params = [-5, -2, -1, -0.5, 0.5, 1, 2, 5]
 c_params = [-5, -2, -1, -0.5, 0.5, 1, 2, 5]
 
 params = [
-    {'a': a, 'b': b, 'c': c} for a in a_params for b in b_params for c in c_params
+    {'a': a} for a in a_params
 ]
+# params = [
+#     {'a': a, 'b': b} for a in a_params for b in b_params
+# ]
+# params = [
+#     {'a': a, 'b': b, 'c': c} for a in a_params for b in b_params for c in c_params
+# ]
 curves.sweep_curve(
-    curve_obj=curves.Hypotrochoid, interval=interval, params=params,
-    title="Hypotrochoid", save_path=save_path)
+    curve_obj=curves.Astroid, interval=interval, params=params,
+    title="Astroid", save_path=save_path)
