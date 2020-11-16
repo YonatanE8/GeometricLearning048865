@@ -32,6 +32,42 @@ class Mesh(ABC):
         self.Avv = None
         self.vertices_degree = None
 
+    @staticmethod
+    def _normalize_vector(vector: np.ndarray) -> np.ndarray:
+        """
+
+        :param vector:
+        :return:
+        """
+
+        norms = np.linalg.norm(vector, axis=1, keepdims=True)
+        vector = vector / norms
+
+        return vector
+
+    @staticmethod
+    def _calc_vertex_angle(main_vertex: np.ndarray,
+                           vertices: np.ndarray, main_vertex_ind: int) -> float:
+        """
+
+        :param main_vertex:
+        :param vertices:
+        :param main_vertex_ind:
+        :return:
+        """
+
+        other_vertices = np.setdiff1d(vertices, np.array([main_vertex_ind, ]))
+        vertex_1 = vertices[other_vertices[0]]
+        vertex_2 = vertices[other_vertices[1]]
+
+        a = np.expand_dims(np.array(main_vertex - vertex_1), 0)
+        b = np.expand_dims(np.array(main_vertex - vertex_2), 1)
+
+        angle = np.arccos(((np.matmul(a, b).item())
+                           / (np.linalg.norm(a) * np.linalg.norm(b))))
+
+        return angle
+
     def _get_vertices_array(self):
         """
         Utility method for gathering all vertices into a single NumPy array
@@ -216,10 +252,10 @@ class Mesh(ABC):
         """
 
         # Get the face adjacency matrix
-        Afv = np.array(self.vertex_face_adjacency().todense())
+        Afv = np.array(self.vertex_face_adjacency().todense()).astype(np.int)
         n_faces = len(self.f)
 
-        # For each face, get two connected vertices
+        # Get vertices for each face
         vertices_inds = [np.where(Afv[:, f] == 1)[0] for f in range(n_faces)]
 
         # Compute the normal vector for each face using the detected vertices
@@ -230,10 +266,7 @@ class Mesh(ABC):
             for vertices in vertices_inds], 0).astype(np.float)
 
         if self.unit_norm:
-            norms = np.linalg.norm(normals, axis=1, keepdims=True)
-            normals /= norms
-
-        normals = np.abs(normals)
+            normals = self._normalize_vector(normals)
 
         return normals
 
@@ -375,7 +408,82 @@ class Mesh(ABC):
 
         return self._vertices_barycenters_areas()
 
+    def _compute_vertex_normals(self) -> np.ndarray:
+        """
 
+        :return:
+        """
 
+        # Get faces areas
+        Af = self.areas
+
+        # Get faces normals
+        normals = self.normals
+
+        # Get vertices-faces adjacency matrix
+        Avf = np.array(self.vertex_face_adjacency().todense().astype(np.int))
+
+        # Sum all weighted areas_per_vertex
+        if self.unit_norm:
+            vertices_areas = np.matmul(Avf, (np.expand_dims(Af, 1)
+                                             * self._normalize_vector(normals)))
+
+        else:
+            vertices_areas = np.matmul(Avf, (np.expand_dims(Af, 1) * normals))
+
+        return vertices_areas
+
+    @property
+    def vertex_normals(self) -> np.ndarray:
+        """
+
+        :return:
+        """
+
+        return self._compute_vertex_normals()
+
+    def _compute_gaussian_curvature(self) -> np.ndarray:
+        """
+
+        :return:
+        """
+
+        # For each vertex, get all adjacent faces and vertices
+        Avf = np.array(self.vertex_face_adjacency().todense().astype(np.int))
+
+        n_vertex = Avf.shape[0]
+        faces_per_vertex = np.array([
+            np.where(Avf[v, :] == 1)[0] for v in range(n_vertex)
+        ])
+
+        vertices_per_vertex = np.array([
+            [np.where(Avf[:, f] == 1)[0] for f in faces] for faces in faces_per_vertex
+        ])
+
+        angels_per_vertex = [
+            self._calc_vertex_angle(
+                main_vertex=self.v[v], vertices=vertices_per_vertex[v],
+                main_vertex_ind=v)
+            for v, vertices in enumerate(vertices_per_vertex)
+        ]
+
+        # Get all vertices - areas
+        Av = self._vertices_barycenters_areas()
+
+        # Calculate final curvatures
+        curvatures = (np.array([
+            (2 * np.pi - np.sum(angles)) for angles in angels_per_vertex
+        ]) / Av)
+
+        return curvatures
+
+    @property
+    def gaussian_curvature(self) -> np.ndarray:
+        """
+
+        :return:
+        """
+
+        return self._compute_gaussian_curvature()
 
 

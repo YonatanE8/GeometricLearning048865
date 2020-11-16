@@ -145,19 +145,22 @@ class TestMesh:
 
         Vd = mesh.vertex_degree()
         Vd_gt = np.array(
-            [2, 2, 2, 6, 2, 2, 2, 2, 6, 4, 2, 4, 6]
+            [6, 4, 4, 6, 4, 4, 6, 4, 6, 6, 4, 6, 6]
         )
 
         assert Vd.shape == (len(self.vertices),)
         assert np.sum(Vd - Vd_gt) == 0
 
     def test_faces_normals(self, vertices_setup):
-        mesh = Mesh()
+        mesh = Mesh(normals_unit_norm=False)
         mesh.v = self.vertices
         mesh.f = self.faces
+        normals = mesh.normals
 
-        normals = mesh.faces_normals(unit_norm=False)
-        normed_normals = mesh.faces_normals(unit_norm=True)
+        mesh = Mesh(normals_unit_norm=True)
+        mesh.v = self.vertices
+        mesh.f = self.faces
+        normed_normals = mesh.normals
         norms = np.sqrt(np.sum(np.power(normed_normals, 2), 1)).tolist()
 
         assert normals.shape == (len(mesh.f), 3)
