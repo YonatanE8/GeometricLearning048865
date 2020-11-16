@@ -96,7 +96,13 @@ class Mesh(ABC):
             Avf = self.vertex_face_adjacency().astype(np.int)
 
             # Note that 2 vertices are adjacent if they share 2 faces
-            self.Avv = (Avf @ Avf.T) == 2
+            Avf_sq = Avf @ Avf.T
+            inds_1 = Avf_sq <= 2
+            inds_2 = Avf_sq > 0
+            Avv = np.array((inds_1 - inds_2).todense()) == False
+            self.Avv = sparse.coo_matrix(Avv,
+                                         shape=Avv.shape,
+                                         dtype=np.bool)
 
         return self.Avv
 
