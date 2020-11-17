@@ -251,19 +251,15 @@ class Mesh(ABC):
         computed normals
         """
 
-        # Get the face adjacency matrix
-        Afv = np.array(self.vertex_face_adjacency().todense()).astype(np.int)
-        n_faces = len(self.f)
-
-        # Get vertices for each face
-        vertices_inds = [np.where(Afv[:, f] == 1)[0] for f in range(n_faces)]
+        # Get all faces & vertices
+        v = np.array(self.v)
+        f = np.array(self.f)
 
         # Compute the normal vector for each face using the detected vertices
-        normals = np.concatenate([np.expand_dims(np.cross(
-            (np.array(self.v[vertices[1]]) - np.array(self.v[vertices[0]])),
-            (np.array(self.v[vertices[2]]) - np.array(self.v[vertices[0]])),
-        ), 0)
-            for vertices in vertices_inds], 0).astype(np.float)
+        a = v[f[:, 0], :]
+        b = v[f[:, 1], :]
+        c = v[f[:, 2], :]
+        normals = np.cross((b - a), (c - a))
 
         if self.unit_norm:
             normals = self._normalize_vector(normals)

@@ -1,5 +1,5 @@
 from src.HW1.utils.io import read_off
-from src.HW1.utils.mesh import Mesh
+from src.HW1.geometry.mesh import Mesh
 from src import PROJECT_ROOT
 
 import os
@@ -30,22 +30,27 @@ class TestMesh:
         self.faces = [
             [0, 3, 6],
             [0, 2, 3],
-            [3, 6, 4],
-            [0, 1, 8],
-            [8, 1, 9],
-            [1, 2, 9],
-            [2, 3, 9],
-            [9, 3, 11],
-            [3, 4, 11],
+            [3, 4, 6],
+
+            [8, 1, 0],
+            [9, 1, 8],
+            [9, 2, 1],
+
+            [3, 2, 9],
+            [11, 3, 9],
+            [11, 4, 3],
+
             [4, 11, 5],
-            [11, 5, 12],
+            [12, 5, 11],
             [5, 12, 6],
-            [6, 7, 12],
-            [7, 8, 12],
-            [0, 8, 7],
-            [8, 9, 10],
-            [8, 10, 12],
-            [10, 11, 12],
+
+            [12, 7, 6],
+            [12, 8, 7],
+            [8, 0, 7],
+
+            [10, 9, 8],
+            [12, 10, 8],
+            [12, 11, 10],
         ]
 
     def test_mesh_init(self):
@@ -168,20 +173,46 @@ class TestMesh:
         for norm in norms:
             pytest.approx(norm, 1.0, 1e-3)
 
-        # directions = np.array([
-        #     [0, 0, -1],
-        #     [0, -1, 0],
-        #     [1, 0, 0],
-        #     [0, 1, 0],
-        #     [-1, 0, 0],
-        #     [0, 0, 1],
-        # ])
-        #
-        # normals = normals.astype(np.int)
-        # normed_normals = normed_normals.astype(np.int)
-        #
-        # assert np.sum(directions - normals) == 0
-        # assert np.sum(directions - normed_normals) == 0
+        directions = np.array([[0., 1., 0.],
+                               [0., 0.5, 0.],
+                               [-0., 0.5, 0.],
+                               [-0.5, 0., 0.],
+                               [-1., 0., 0.],
+                               [-0.5, 0., 0.],
+                               [0., 0., 0.5],
+                               [0., 0., 1.],
+                               [0., -0., 0.5],
+                               [0.5, 0., 0.],
+                               [1., 0., 0.],
+                               [0.5, 0., 0.],
+                               [0., 0., -0.5],
+                               [0., 0., -1.],
+                               [0., 0., -0.5],
+                               [-0., -0.5, 0.],
+                               [0., -1., 0.],
+                               [0., -0.5, 0.]])
+
+        norm_directions = np.array([[0., 1., 0.],
+                                    [0., 1., 0.],
+                                    [-0., 1., 0.],
+                                    [-1., 0., 0.],
+                                    [-1., 0., 0.],
+                                    [-1., 0., 0.],
+                                    [0., 0., 1.],
+                                    [0., 0., 1.],
+                                    [0., -0., 1.],
+                                    [1., 0., 0.],
+                                    [1., 0., 0.],
+                                    [1., 0., 0.],
+                                    [0., 0., -1.],
+                                    [0., 0., -1.],
+                                    [0., 0., -1.],
+                                    [-0., -1., 0.],
+                                    [0., -1., 0.],
+                                    [0., -1., 0.]])
+
+        assert np.sum(directions - normals) == 0
+        assert np.sum(norm_directions - normed_normals) == 0
 
     def test_barycenters(self, vertices_setup):
         mesh = Mesh()
@@ -203,5 +234,3 @@ class TestMesh:
 
     def test_gaussian_curvature(self, vertices_setup):
         pass
-
-
