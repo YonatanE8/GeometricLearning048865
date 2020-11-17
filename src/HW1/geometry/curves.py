@@ -2,8 +2,9 @@ import matplotlib
 
 matplotlib.use('TkAgg')
 
-from abc import ABC
+from abc import ABC, abstractmethod
 from typing import Callable
+from scipy.integrate import quad
 from matplotlib import pyplot as plt
 
 import numpy as np
@@ -14,7 +15,8 @@ class Curve(ABC):
 
     """
 
-    def __init__(self, x_parametrization: Callable, y_parametrization: Callable):
+    def __init__(self, x_parametrization: Callable, y_parametrization: Callable,
+                 curvature_computation_method: str = 'xy'):
         """
         Initialize a curve object
 
@@ -22,8 +24,11 @@ class Curve(ABC):
         :param y_parametrization:
         """
 
+        assert curvature_computation_method in ('xy', 'c_prime_sq')
+
         self.x_parametrization = x_parametrization
         self.y_parametrization = y_parametrization
+        self.curvature_computation_method = curvature_computation_method
 
     @staticmethod
     def get_interval(start: float = 0., end: float = 1.,
@@ -92,6 +97,115 @@ class Curve(ABC):
                 save_path = save_path + '.png'
 
             fig.savefig(save_path, dpi=300, orientation='landscape', format='png')
+
+    def unit_tangent(self, t: np.ndarray) -> np.ndarray:
+        """
+
+        :param t:
+        :return:
+        """
+
+        c_prime = self.grad(t)
+        tangent = c_prime / np.linalg.norm(c_prime)
+
+        return tangent
+
+    def arc_length(self, t: np.ndarray) -> float:
+        """
+
+        :param t:
+        :return:
+        """
+
+        def integrand(t: np.ndarray) -> np.ndarray:
+            c_prime = np.linalg.norm(self.grad(t))
+
+            return c_prime
+
+        arc_length = quad(func=integrand, a=t[0], b=t[1])
+
+        return arc_length[0]
+
+    def unit_normal(self, t: np.ndarray) -> np.ndarray:
+        """
+
+        :param t:
+        :return:
+        """
+
+        unit_tangent = self.unit_tangent(t)
+
+        if len(unit_tangent) == 2:
+            normal = np.array(
+                [-unit_tangent[1], unit_tangent[0]]
+            )
+
+        else:
+            j = np.array(
+                [
+                    [0, -1],
+                    [1, 0]
+                ]
+            )
+
+            normal = np.matmul(j, unit_tangent)
+
+        return normal
+
+    def curvature(self, t: np.ndarray) -> np.ndarray:
+        """
+
+        :return:
+        """
+
+        if self.curvature_computation_method == 'xy':
+            g = self.grad(t)
+            g_sq = self.grad_sq(t)
+
+            nominator = g[0] * g_sq[1] - g[1] * g_sq[0]
+            denominator = np.power((np.power(g[0], 2) + np.power(g[1], 2)), 1.5)
+
+            curveature_ = nominator / denominator
+
+        elif self.curvature_computation_method == 'c_prime_sq':
+            unit_normal = self.unit_normal(t)
+            grad_sq = self.grad_sq(t)
+
+            curveature_ = np.matmul(unit_normal, grad_sq)
+
+        return curveature_
+
+    def unit_tangent_prime(self, t: np.ndarray) -> np.ndarray:
+        """
+
+        :param t:
+        :return:
+        """
+
+        normal = self.unit_normal(t)
+        curvature_ = self.curvature(t)
+
+        return curvature_ * normal
+
+    @abstractmethod
+    def grad(self, t: np.ndarray) -> np.ndarray:
+        """
+
+        :param t:
+        :return:
+        """
+
+        raise NotImplemented
+
+    @abstractmethod
+    def grad_sq(self, t: np.ndarray) -> np.ndarray:
+        """
+
+        :param t:
+        :return:
+        """
+
+        raise NotImplemented
 
 
 class Astroid(Curve):
@@ -314,6 +428,49 @@ class InvoluteCircle(Curve):
 
         super(InvoluteCircle, self).__init__(x_parametrization=x_param,
                                              y_parametrization=y_param)
+
+        self.a = a
+
+
+class Cusp(Curve):
+    """
+
+    """
+
+    def __init__(self):
+        """
+
+        """
+
+        def x_param(t: np.ndarray):
+            return np.power(t, 3)
+
+        def y_param(t: np.ndarray):
+            return np.power(t, 2)
+
+        super(Cusp, self).__init__(x_parametrization=x_param,
+                                   y_parametrization=y_param)
+
+
+class Knot(Curve):
+    """
+
+    """
+
+    def __init__(self, a: float = 1.):
+        """
+
+        :param a:
+        """
+
+        def x_param(t: np.ndarray):
+            return np.power(t, 3) - a
+
+        def y_param(t: np.ndarray):
+            return np.power(t, 2) - a
+
+        super(Knot, self).__init__(x_parametrization=x_param,
+                                   y_parametrization=y_param)
 
         self.a = a
 
