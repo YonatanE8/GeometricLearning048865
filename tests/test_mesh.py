@@ -48,6 +48,28 @@ class TestMesh:
             [12, 11, 10],
         ]
 
+    @pytest.fixture()
+    def simple_cube(self):
+        self.vertices = [
+            [0, 1, 0],
+            [0, 1, 1],
+            [1, 1, 1],
+            [1, 1, 0],
+            [0, 0, 0],
+            [0, 0, 1],
+            [1, 0, 1],
+            [1, 0, 0],
+        ]
+
+        self.faces = [
+            [0, 1, 2, 3],
+            [0, 4, 5, 1],
+            [1, 5, 6, 2],
+            [6, 7, 3, 2],
+            [7, 4, 0, 3],
+            [4, 5, 6, 7],
+        ]
+
     def test_mesh_init(self):
         data_dir = os.path.join(PROJECT_ROOT, 'data', 'example_off_files')
         file = glob.glob(os.path.join(data_dir, '*.off'))[0]
@@ -326,6 +348,16 @@ class TestMesh:
         # and leads to E = 33.
         assert ec == -2
 
+        # Test the the Euler invariance theorem holds for a valid sample shape
+        data_dir = os.path.join(PROJECT_ROOT, 'data', 'example_off_files')
+        file = glob.glob(os.path.join(data_dir, '*.off'))[0]
+
+        # Load Mesh
+        mesh = Mesh(file)
+        ec = mesh.euler_characteristic
+
+        assert ec == 2
+
     def test_gaussian_curvature(self, vertices_setup):
         mesh = Mesh(normals_unit_norm=False)
         mesh.v = self.vertices
@@ -349,4 +381,12 @@ class TestMesh:
         diff = np.abs(gauss_bonnet_scalar - (2 * np.pi * mesh.euler_characteristic))
         assert pytest.approx(diff, 0, 1e-8)
 
+    def test_vertices_centroid(self, simple_cube):
+        mesh = Mesh(normals_unit_norm=False)
+        mesh.v = self.vertices
+        mesh.f = self.faces
 
+        centroid = mesh.vertices_centroid
+        diff = np.sum(np.abs(centroid == np.array([0.5, 0.5, 0.5])))
+
+        assert pytest.approx(diff, 0, 1e-8)
