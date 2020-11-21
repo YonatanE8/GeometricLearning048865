@@ -289,14 +289,13 @@ class Mesh(ABC):
         # Get the coordinates of all vertices for each face
         faces = np.array(self.f)
         faces_vertices = np.array(self.v)
-        faces_vertices = np.array([
-            np.expand_dims([faces_vertices[faces[f, :]]], 0)
-            for f in range(faces.shape[0])
-        ])
-        faces_vertices = np.concatenate(faces_vertices, 0)
 
         # Compute the barycenters
-        barycenters = np.mean(faces_vertices, 1)
+        barycenters = np.array(
+            [np.mean(np.concatenate([np.expand_dims(np.array(faces_vertices[v]), 0)
+                                     for v in face], 0), 0)
+             for face in faces]
+        )
 
         return barycenters
 
@@ -331,9 +330,9 @@ class Mesh(ABC):
             for f in range(faces.shape[0])]
         triangles = np.concatenate([
             np.expand_dims(np.array((
-                np.sqrt(np.power((tri[0] - tri[1]), 2)),
-                np.sqrt(np.power((tri[0] - tri[2]), 2)),
-                np.sqrt(np.power((tri[1] - tri[2]), 2)),
+                np.sqrt(np.sum(np.power((tri[0] - tri[1]), 2))),
+                np.sqrt(np.sum(np.power((tri[0] - tri[2]), 2))),
+                np.sqrt(np.sum(np.power((tri[1] - tri[2]), 2))),
             )), 0)
             for tri in faces_vertices
         ], 0)
@@ -375,21 +374,15 @@ class Mesh(ABC):
 
         # Get the vertex-face adjacency matrix
         n_vertices = len(self.v)
-        Avf = np.array(self.vertex_face_adjacency().todense())
-
-        # Get faces matrix
-        faces = self._get_faces_array()
+        Avf = self.vertex_face_adjacency()
 
         # Get the faces areas matrix
         faces_areas = self.areas
 
-        # Compute the barycenter area for each vertex based on all adjacent faces
-        # which are triangular
-        areas = np.array([
-            ((1 / 3) * np.sum([faces_areas[face_ind]
-                               for face_ind in Avf[i, :] if faces[face_ind, 0] == 3]))
-            for i in range(n_vertices)
-        ])
+        # Note that the we can get the Barycenters areas simply by
+        # 1/3 * Avf * faces_areas as the adjacency matrix will automatically sum over
+        # all relevant faces for each vertex
+        areas = (1 / 3) * Avf * faces_areas
 
         return areas
 

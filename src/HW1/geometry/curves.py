@@ -36,7 +36,7 @@ class Curve(ABC):
         """
         :param start:
         :param end:
-        :param n_points:
+        :param n_points: 
 
         :return
         """
@@ -229,6 +229,40 @@ class Astroid(Curve):
                                       y_parametrization=y_param)
 
         self.a = a
+
+    @abstractmethod
+    def grad(self, t: np.ndarray) -> np.ndarray:
+        """
+
+        :param t:
+        :return:
+        """
+
+        x_prime = self.a * 3 * np.power(np.cos(t), 2) * (-np.sin(t))
+        y_prime = self.a * 3 * np.power(np.sin(t), 2) * np.cos(t)
+
+        return np.array(
+            [x_prime, y_prime]
+        )
+
+    @abstractmethod
+    def grad_sq(self, t: np.ndarray) -> np.ndarray:
+        """
+
+        :param t:
+        :return:
+        """
+
+        x_prime_prime = (self.a * 3 *
+                         ((2 * np.cos(t) * np.sin(t) * np.sin(t)) +
+                          (-np.cos(t) * np.power(np.cos(t), 2))))
+        y_prime_prime = (self.a * 3 *
+                         ((2 * np.sin(t)) * np.cos(t) * np.cos(t)) +
+                         (-np.power(np.sin(t), 2) * np.cos(t) * np.sun(t)))
+
+        return np.array(
+            [x_prime_prime, y_prime_prime]
+        )
 
 
 class Cardioid(Curve):

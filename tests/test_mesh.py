@@ -31,23 +31,18 @@ class TestMesh:
             [0, 3, 6],
             [0, 2, 3],
             [3, 4, 6],
-
             [8, 1, 0],
             [9, 1, 8],
             [9, 2, 1],
-
             [3, 2, 9],
             [11, 3, 9],
             [11, 4, 3],
-
             [4, 11, 5],
             [12, 5, 11],
             [5, 12, 6],
-
             [12, 7, 6],
             [12, 8, 7],
             [8, 0, 7],
-
             [10, 9, 8],
             [12, 10, 8],
             [12, 11, 10],
@@ -218,16 +213,66 @@ class TestMesh:
         mesh = Mesh()
         mesh.v = self.vertices
         mesh.f = self.faces
+        barycenters = mesh.barycenters
+
+        n_faces = len(self.faces)
+        gt_barycenters = np.array(
+            [np.mean(np.concatenate([np.expand_dims(np.array(self.vertices[v]), 0)
+                                     for v in self.faces[f]], 0), 0)
+             for f in range(n_faces)]
+        )
+
+        assert np.sum((barycenters - gt_barycenters)) == 0
 
     def test_areas(self, vertices_setup):
         mesh = Mesh()
         mesh.v = self.vertices
         mesh.f = self.faces
+        areas = mesh.areas
+
+        gt_areas = []
+        for face in self.faces:
+            v1 = np.array(self.vertices[face[0]])
+            v2 = np.array(self.vertices[face[1]])
+            v3 = np.array(self.vertices[face[2]])
+
+            a = np.sqrt(np.sum(np.power((v1 - v2), 2)))
+            b = np.sqrt(np.sum(np.power((v1 - v3), 2)))
+            c = np.sqrt(np.sum(np.power((v2 - v3), 2)))
+
+            s = (a + b + c) / 2
+            area = np.sqrt((s * (s - a) * (s - b) * (s - c)))
+
+            gt_areas.append(area)
+
+        gt_areas = np.array(gt_areas)
+
+        diff = np.sum((gt_areas - areas))
+        assert pytest.approx(diff, 0, 1e-8)
+        for area in areas:
+            assert area > 0
 
     def test_barycenters_areas(self, vertices_setup):
         mesh = Mesh()
         mesh.v = self.vertices
         mesh.f = self.faces
+        barycenters_areas = mesh.barycenters_areas
+
+        # Get faces areas
+        faces_areas = mesh.areas
+
+        gt_vertices_areas = []
+        vertex_face_adj = mesh.vertex_face_adjacency().todense().astype(np.int).tolist()
+        vertex_face_adj = [np.where(np.array(row) == 1)[0] for row in vertex_face_adj]
+        for v in vertex_face_adj:
+            gt_vertices_areas.append((np.sum(faces_areas[v]) / 3))
+
+        gt_vertices_areas = np.array(gt_vertices_areas)
+
+        diff = np.sum((gt_vertices_areas - barycenters_areas))
+        assert pytest.approx(diff, 0, 1e-8)
+        for area in barycenters_areas:
+            assert area > 0
 
     def test_vertex_normals(self, vertices_setup):
         pass
