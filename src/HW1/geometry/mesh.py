@@ -406,21 +406,31 @@ class Mesh(ABC):
         # Get faces areas
         Af = self.areas
 
-        # Get faces normals
+        # Get faces normals, if normalization is required then we need to do it only
+        # after computing the final vertex normals
+        normalize = False
+        if self.unit_norm:
+            self.unit_norm = False
+            normalize = True
+
         normals = self.normals
 
         # Get vertices-faces adjacency matrix
-        Avf = np.array(self.vertex_face_adjacency().todense().astype(np.int))
+        Avf = self.vertex_face_adjacency()
 
-        # Sum all weighted areas_per_vertex
-        if self.unit_norm:
-            vertices_areas = np.matmul(Avf, (np.expand_dims(Af, 1)
-                                             * self._normalize_vector(normals)))
+        # Calculate all weighted normals
+        weighted_normals = np.expand_dims(Af, 1) * normals
 
-        else:
-            vertices_areas = np.matmul(Avf, (np.expand_dims(Af, 1) * normals))
+        # Compute all weighted areas_per_vertex
+        vertices_normals = Avf @ weighted_normals
 
-        return vertices_areas
+        # Normalize normals to have unit-norm is required
+        if normalize:
+            self.unit_norm = True
+            vertices_normals = vertices_normals / np.expand_dims(
+                np.linalg.norm(vertices_normals, axis=1), 1)
+
+        return vertices_normals
 
     @property
     def vertex_normals(self) -> np.ndarray:

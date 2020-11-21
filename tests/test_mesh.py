@@ -166,7 +166,7 @@ class TestMesh:
         assert normals.shape == (len(mesh.f), 3)
         assert normed_normals.shape == (len(mesh.f), 3)
         for norm in norms:
-            pytest.approx(norm, 1.0, 1e-3)
+            pytest.approx(norm, 1.0, 1e-8)
 
         directions = np.array([[0., 1., 0.],
                                [0., 0.5, 0.],
@@ -275,7 +275,39 @@ class TestMesh:
             assert area > 0
 
     def test_vertex_normals(self, vertices_setup):
-        pass
+        mesh = Mesh(normals_unit_norm=False)
+        mesh.v = self.vertices
+        mesh.f = self.faces
+        normals = mesh.normals
+
+        faces_areas = np.expand_dims(mesh.areas, 1)
+        weighted_areas = faces_areas * normals
+        vertex_face_adj = mesh.vertex_face_adjacency().todense().astype(np.int).tolist()
+        vertex_face_adj = [np.where(np.array(row) == 1)[0] for row in vertex_face_adj]
+
+        gt_vertices_normals = []
+        gt_normalized_vertices_normals = []
+        for v in vertex_face_adj:
+            normal = np.sum(weighted_areas[v, :], 0)
+            gt_vertices_normals.append(normal)
+            weighted_normal = normal / np.linalg.norm(normal)
+            gt_normalized_vertices_normals.append(weighted_normal)
+
+        gt_vertices_normals = np.array(gt_vertices_normals)
+        gt_normalized_vertices_normals = np.array(gt_normalized_vertices_normals)
+
+        vertices_normals = mesh.vertex_normals
+        mesh = Mesh(normals_unit_norm=True)
+        mesh.v = self.vertices
+        mesh.f = self.faces
+        normalized_vertices_normals = mesh.vertex_normals
+
+        diff = np.sum(np.abs(vertices_normals - gt_vertices_normals))
+        norm_diff = np.sum(np.abs(normalized_vertices_normals -
+                                  gt_normalized_vertices_normals))
+
+        assert pytest.approx(diff, 0, 1e-8)
+        assert pytest.approx(norm_diff, 0, 1e-8)
 
     def test_gaussian_curvature(self, vertices_setup):
         pass
