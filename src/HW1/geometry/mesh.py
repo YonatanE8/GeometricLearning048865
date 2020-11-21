@@ -33,20 +33,21 @@ class Mesh(ABC):
         self.vertices_degree = None
 
     @staticmethod
-    def _normalize_vector(vector: np.ndarray) -> np.ndarray:
+    def _normalize_vector(vector: np.ndarray) -> (np.ndarray, np.ndarray):
         """
         Utility method for normalizing an input vector such that the L2-norm of the
         normalized vector will be equal to 1
 
         :param vector: (np.ndarray) The vector to normalize
 
-        :return: (np.ndarray) The L-2 normalized vector
+        :return: (np.ndarray, np.ndarray) Tuple containing the L-2 normalized vector
+         in index 0 and the computed norms in index 1
         """
 
         norms = np.linalg.norm(vector, axis=1, keepdims=True)
         vector = vector / norms
 
-        return vector
+        return vector, norms
 
     @staticmethod
     def _calc_vertex_angle(main_vertex: np.ndarray,
@@ -231,8 +232,9 @@ class Mesh(ABC):
         """
 
         # Validate input
-        assert scalar_func in ('inds', 'degree', 'coo'), \
-            "'scalar_func' must be either 'inds', 'degree' or 'coo'"
+        assert scalar_func in ('inds', 'degree', 'coo', 'face_area', 'vertex_area'), \
+            "'scalar_func' must be either 'inds', 'degree', 'coo', " \
+            "'face_area' or 'vertex_area'"
 
         vertices = self._get_vertices_array()
         faces = self._get_faces_array()
@@ -247,8 +249,17 @@ class Mesh(ABC):
         elif scalar_func == 'coo':
             colors = np.sqrt(np.sum(np.power(vertices, 2), 1))
 
+        elif scalar_func == 'face_area':
+            colors = self.areas
+
         # If using vertex-coloring function, interpolate colors for all faces
         if scalar_func in ('degree', 'coo'):
+            colors = np.array([
+                np.mean(colors[faces[f, 1:]]) for f in range(faces.shape[0])
+            ])
+
+        elif scalar_func == 'vertex_area':
+            colors = self.barycenters_areas
             colors = np.array([
                 np.mean(colors[faces[f, 1:]]) for f in range(faces.shape[0])
             ])
@@ -259,13 +270,14 @@ class Mesh(ABC):
                          scalars=colors)
         plotter.show()
 
-    def _faces_normals(self) -> np.ndarray:
+    def _faces_normals(self) -> (np.ndarray, np.ndarray):
         """
         A utility method for computing the 'outward-facing' normal vectors of each face in
         the mesh.
 
-        :return: (np.ndarray) A NumPy array of shape (|F|, 3), containing the
-        computed normals
+        :return: (np.ndarray, np.ndarray) Tuple containing an array of shape (|F|, 3),
+        containing the computed normals, and a np.ndarray containing the computed norms.
+         If the normals are not normalize then the norms are an empty ndarray.
         """
 
         # Get all faces & vertices
@@ -278,10 +290,11 @@ class Mesh(ABC):
         c = v[f[:, 2], :]
         normals = np.cross((b - a), (c - a))
 
+        norms = np.array([])
         if self.unit_norm:
-            normals = self._normalize_vector(normals)
+            normals, norms = self._normalize_vector(normals)
 
-        return normals
+        return normals, norms
 
     @property
     def normals(self) -> np.ndarray:
@@ -292,7 +305,7 @@ class Mesh(ABC):
         computed normals
         """
 
-        return self._faces_normals()
+        return self._faces_normals()[0]
 
     def _faces_barycenters(self) -> np.ndarray:
         """
@@ -414,13 +427,14 @@ class Mesh(ABC):
 
         return self._vertices_barycenters_areas()
 
-    def _compute_vertex_normals(self) -> np.ndarray:
+    def _compute_vertex_normals(self) -> (np.ndarray, np.ndarray):
         """
         A utility method for computing the vertices normals vectors.
 
-        :return: (np.ndarray) A NumPy array of shape (|V|, 3), containing the
+        :return: (np.ndarray) Tuple containing an array of shape (|V|, 3), with the
         normal of each vertex, if the unit_norm attribute is set to True,
-        each normal will have a L2-norm of 1.
+        each normal will have a L2-norm of 1. and a np.ndarray containing the computed
+        norms. If the normals are not normalize then the norms are an empty ndarray.
         """
 
         # Get faces areas
@@ -445,12 +459,13 @@ class Mesh(ABC):
         vertices_normals = Avf @ weighted_normals
 
         # Normalize normals to have unit-norm is required
+        norms = np.array([])
         if normalize:
             self.unit_norm = True
-            vertices_normals = vertices_normals / np.expand_dims(
-                np.linalg.norm(vertices_normals, axis=1), 1)
+            norms = np.linalg.norm(vertices_normals, axis=1)
+            vertices_normals = vertices_normals / np.expand_dims(norms, 1)
 
-        return vertices_normals
+        return vertices_normals, norms
 
     @property
     def vertex_normals(self) -> np.ndarray:
@@ -462,7 +477,7 @@ class Mesh(ABC):
         each normal will have a L2-norm of 1.
         """
 
-        return self._compute_vertex_normals()
+        return self._compute_vertex_normals()[0]
 
     def _euler_characteristic(self) -> int:
         """
@@ -543,5 +558,85 @@ class Mesh(ABC):
 
         return self._compute_gaussian_curvature()
 
+    def render_vertices_normals(self, normalize: bool, add_norms: bool = False) -> None:
+        """
+        A method for visualizing the normal vectors of all vertices in the mesh.
 
+        :param normalize: (bool) Whether to normalize the normal vectors to
+        have L2-norm = 1. Note that this is irrespective of whether the Mesh class was
+        instantiated with normals_unit_norm = True or not.
+        :param add_norms: (bool) Whether to also visualize the norm of each
+        un-normalized vertex's normal.
+
+        :return: None
+        """
+
+        vertices = self._get_vertices_array()
+        faces = self._get_faces_array()
+        mesh = pv.PolyData(vertices, faces)
+        mesh.vectors = vertices
+
+        if add_norms:
+            arrows = mesh.glyph(orient="Normals", tolerance=0.05)
+
+            colors = self._compute_vertex_normals()[1]
+            colors = np.array([
+                np.mean(colors[faces[f, 1:]]) for f in range(faces.shape[0])
+            ])
+
+            plotter = pv.Plotter()
+            plotter.add_mesh(arrows, color="black", lighting=False)
+            plotter.add_mesh(mesh, style='surface', cmap='hot', scalars=colors)
+            plotter.show()
+
+        else:
+            if normalize:
+                arrows = mesh.glyph(scale="Normals", orient="Normals", tolerance=0.05)
+
+            else:
+                arrows = mesh.glyph(orient="Normals", tolerance=0.05)
+
+            plotter = pv.Plotter()
+            plotter.add_mesh(arrows, color="black", lighting=False)
+            plotter.add_mesh(mesh, style="wireframe")
+            plotter.show()
+
+    def render_faces_normals(self, normalize: bool, add_norms: bool = False) -> None:
+        """
+        A method for visualizing the normal vectors of all vertices in the mesh.
+
+        :param normalize: (bool) Whether to normalize the normal vectors to
+        have L2-norm = 1. Note that this is irrespective of whether the Mesh class was
+        instantiated with normals_unit_norm = True or not.
+        :param add_norms: (bool) Whether to also visualize the norm of each
+        un-normalized vertex's normal.
+
+        :return: None
+        """
+
+        vertices = self._get_vertices_array()
+        faces = self._get_faces_array()
+        mesh = pv.PolyData(vertices, faces)
+        mesh.vectors = self.barycenters
+
+        if add_norms:
+            arrows = mesh.glyph(orient="Normals", tolerance=0.05)
+            colors = self._faces_normals()[1]
+
+            plotter = pv.Plotter()
+            plotter.add_mesh(arrows, color="black", lighting=False)
+            plotter.add_mesh(mesh, style='surface', cmap='hot', scalars=colors)
+            plotter.show()
+
+        else:
+            if normalize:
+                arrows = mesh.glyph(scale="Normals", orient="Normals", tolerance=0.05)
+
+            else:
+                arrows = mesh.glyph(orient="Normals", tolerance=0.05)
+
+            plotter = pv.Plotter()
+            plotter.add_mesh(arrows, color="black", lighting=False)
+            plotter.add_mesh(mesh, style='surface', cmap='hot')
+            plotter.show()
 
