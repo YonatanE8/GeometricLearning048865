@@ -1,5 +1,5 @@
 from src import PROJECT_ROOT
-from src.HW1.geometry.mesh import Mesh
+from src.geometry.mesh import Mesh
 
 import os
 import glob

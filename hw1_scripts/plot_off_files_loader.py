@@ -1,4 +1,4 @@
-from src.HW1.utils.io import read_off
+from src.utils.io import read_off
 from src import PROJECT_ROOT
 
 import matplotlib

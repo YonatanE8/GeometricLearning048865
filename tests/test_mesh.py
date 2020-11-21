@@ -1,5 +1,5 @@
-from src.HW1.utils.io import read_off
-from src.HW1.geometry.mesh import Mesh
+from src.utils.io import read_off
+from src.geometry.mesh import Mesh
 from src import PROJECT_ROOT
 
 import os

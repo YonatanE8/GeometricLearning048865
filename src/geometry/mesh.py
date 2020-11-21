@@ -1,5 +1,5 @@
 from abc import ABC
-from src.HW1.utils.io import read_off
+from src.utils.io import read_off
 
 import numpy as np
 import pyvista as pv
@@ -639,4 +639,28 @@ class Mesh(ABC):
             plotter.add_mesh(arrows, color="black", lighting=False)
             plotter.add_mesh(mesh, style='surface', cmap='hot')
             plotter.show()
+
+    def _compute_vertex_centroid(self) -> np.ndarray:
+        """
+        Utility method for computing the vertices centroid of the mesh.
+
+        :return: (np.ndarray) Coordinates of the mesh's vertices centroid
+        """
+
+        vertices = self._get_vertices_array()
+        centroid = np.mean(vertices, 0)
+
+        return centroid
+
+    @property
+    def vertices_centroid(self) -> np.ndarray:
+        """
+        A mesh property containing the mesh's vertices centroid.
+
+        :return: (np.ndarray) Coordinates of the mesh's vertices centroid
+        """
+
+        return self._compute_vertex_centroid()
+
+
 

@@ -1,4 +1,4 @@
-from src.HW1.utils.io import write_off, read_off
+from src.utils.io import write_off, read_off
 from src import PROJECT_ROOT
 
 import os
