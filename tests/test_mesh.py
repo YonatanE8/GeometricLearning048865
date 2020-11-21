@@ -309,5 +309,44 @@ class TestMesh:
         assert pytest.approx(diff, 0, 1e-8)
         assert pytest.approx(norm_diff, 0, 1e-8)
 
+    def test_euler_characteristic(self, vertices_setup):
+        mesh = Mesh(normals_unit_norm=False)
+        mesh.v = self.vertices
+        mesh.f = self.faces
+        ec = mesh.euler_characteristic
+
+        # We have a cube where each face is represented as 3 triangles, so overall
+        # F = 18, V = 13, E = 33
+        # Note that we have 4 triangles with 'redundant' connection, i.e.
+        # vertices: 0-2, 0 - 6, 4 - 6, 9 - 11, which can be avoided
+        # by using 4-vertices faces for those triangles.
+        # If we would remove those connections we would get E = 29 and the
+        # Euler characteristic would have been 2, but since we assume that each face
+        # is defined from exactly 3 vertices in the mesh, this is currently unavoidable,
+        # and leads to E = 33.
+        assert ec == -2
+
     def test_gaussian_curvature(self, vertices_setup):
-        pass
+        mesh = Mesh(normals_unit_norm=False)
+        mesh.v = self.vertices
+        mesh.f = self.faces
+
+        gaussian_curvatures = mesh.gaussian_curvature
+        for curve in gaussian_curvatures:
+            assert curve >= 0
+
+        # Test that the Gauss Bonnet Theorem holds for the an exemplary shape we
+        # were given
+        data_dir = os.path.join(PROJECT_ROOT, 'data', 'example_off_files')
+        file = glob.glob(os.path.join(data_dir, '*.off'))[0]
+
+        # Load Mesh
+        mesh = Mesh(file)
+
+        vertices_areas = mesh.barycenters_areas
+        gaussian_curvatures = mesh.gaussian_curvature
+        gauss_bonnet_scalar = gaussian_curvatures @ vertices_areas
+        diff = np.abs(gauss_bonnet_scalar - (2 * np.pi * mesh.euler_characteristic))
+        assert pytest.approx(diff, 0, 1e-8)
+
+

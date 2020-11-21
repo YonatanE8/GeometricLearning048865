@@ -35,9 +35,12 @@ class Mesh(ABC):
     @staticmethod
     def _normalize_vector(vector: np.ndarray) -> np.ndarray:
         """
+        Utility method for normalizing an input vector such that the L2-norm of the
+        normalized vector will be equal to 1
 
-        :param vector:
-        :return:
+        :param vector: (np.ndarray) The vector to normalize
+
+        :return: (np.ndarray) The L-2 normalized vector
         """
 
         norms = np.linalg.norm(vector, axis=1, keepdims=True)
@@ -47,24 +50,38 @@ class Mesh(ABC):
 
     @staticmethod
     def _calc_vertex_angle(main_vertex: np.ndarray,
-                           vertices: np.ndarray, main_vertex_ind: int) -> float:
+                           vertices: np.ndarray, main_vertex_ind: int,
+                           all_vertices_inds: np.ndarray) -> float:
+        """
+        Utility method for computing specific vertex's angle in a specific face
+
+        :param main_vertex: (np.ndarray) Coordinates vector of the vertex for
+        which the angle is computed
+        :param vertices: (np.ndarray) Coordinates of all three vertices
+        :param main_vertex_ind: (int) Index of the vertex for which the angle
+         is computed
+        :param all_vertices_inds: (np.ndarray) Indices of all vertices
+
+        :return: (float) The angle of main_vertex in the face containing all
+         three vertices
         """
 
-        :param main_vertex:
-        :param vertices:
-        :param main_vertex_ind:
-        :return:
-        """
-
-        other_vertices = np.setdiff1d(vertices, np.array([main_vertex_ind, ]))
+        # Computing the angle using the cosine theorem:
+        # theta = arccos((a^2 + b^2 - c^2) / (2ab))
+        other_vertices = np.setdiff1d(np.arange(3),
+                                      np.where(all_vertices_inds == main_vertex_ind)[0])
         vertex_1 = vertices[other_vertices[0]]
         vertex_2 = vertices[other_vertices[1]]
 
-        a = np.expand_dims(np.array(main_vertex - vertex_1), 0)
-        b = np.expand_dims(np.array(main_vertex - vertex_2), 1)
+        a = vertex_1 - main_vertex
+        b = vertex_2 - main_vertex
+        c = vertex_2 - vertex_1
+        size_a = np.sqrt(np.sum(np.power(a, 2)))
+        size_b = np.sqrt(np.sum(np.power(b, 2)))
+        size_c = np.sqrt(np.sum(np.power(c, 2)))
 
-        angle = np.arccos(((np.matmul(a, b).item())
-                           / (np.linalg.norm(a) * np.linalg.norm(b))))
+        angle = np.arccos((((size_a ** 2) + (size_b ** 2) - (size_c ** 2)) /
+                           (2 * size_a * size_b)))
 
         return angle
 
@@ -399,8 +416,11 @@ class Mesh(ABC):
 
     def _compute_vertex_normals(self) -> np.ndarray:
         """
+        A utility method for computing the vertices normals vectors.
 
-        :return:
+        :return: (np.ndarray) A NumPy array of shape (|V|, 3), containing the
+        normal of each vertex, if the unit_norm attribute is set to True,
+        each normal will have a L2-norm of 1.
         """
 
         # Get faces areas
@@ -435,52 +455,90 @@ class Mesh(ABC):
     @property
     def vertex_normals(self) -> np.ndarray:
         """
+        A mesh property, containing the normal vector of each vertex in the mesh.
 
-        :return:
+        :return: (np.ndarray) A NumPy array of shape (|V|, 3), containing the
+        normal of each vertex, if the unit_norm attribute is set to True,
+        each normal will have a L2-norm of 1.
         """
 
         return self._compute_vertex_normals()
 
-    def _compute_gaussian_curvature(self) -> np.ndarray:
+    def _euler_characteristic(self) -> int:
+        """
+        A utility method for computing the Euler Characteristic $\chi$ of the mesh.
+
+        :return: (int) The Euler Characteristic $\chi$ of the mesh.
         """
 
-        :return:
+        # Get V and F immediately
+        n_v = len(self.v)
+        n_f = len(self.f)
+
+        # E is the # of non-zero entries in the upper-triangle of the
+        # vertex-vertex adjacency matrix.
+        n_e = self.vertex_vertex_adjacency().todense()
+        n_e = int(np.sum([np.sum(n_e[r, r:]) for r in range(n_v)]).item())
+
+        return n_v - n_e + n_f
+
+    @property
+    def euler_characteristic(self) -> int:
+        """
+        A mesh property, containing the Euler Characteristic $\chi$ of the mesh.
+
+        :return: (int) The Euler Characteristic $\chi$ of the mesh.
+        """
+
+        return self._euler_characteristic()
+
+    def _compute_gaussian_curvature(self) -> np.ndarray:
+        """
+        A utility method for computing the Gaussian curvature for each vertex.
+
+        :return: (np.ndarray) A NumPy array of shape (|V|, ), containing the
+        Gaussian curvature of each vertex.
         """
 
         # For each vertex, get all adjacent faces and vertices
         Avf = np.array(self.vertex_face_adjacency().todense().astype(np.int))
 
-        n_vertex = Avf.shape[0]
+        # Pre-computations
+        n_vertex = len(self.v)
         faces_per_vertex = np.array([
             np.where(Avf[v, :] == 1)[0] for v in range(n_vertex)
         ])
+        vertices_per_vertex = [
+            [np.where(Avf[:, f] == 1)[0] for f in faces]
+            for faces in faces_per_vertex
+        ]
+        vertices_array = self._get_vertices_array()
 
-        vertices_per_vertex = np.array([
-            [np.where(Avf[:, f] == 1)[0] for f in faces] for faces in faces_per_vertex
-        ])
-
+        # Compute the angle per face per vertex
         angels_per_vertex = [
-            self._calc_vertex_angle(
-                main_vertex=self.v[v], vertices=vertices_per_vertex[v],
-                main_vertex_ind=v)
+            np.array([self._calc_vertex_angle(
+                main_vertex=self.v[v], vertices=vertices_array[f],
+                main_vertex_ind=v, all_vertices_inds=f)
+                for f in vertices_per_vertex[v]])
             for v, vertices in enumerate(vertices_per_vertex)
         ]
 
-        # Get all vertices - areas
+        # Get all vertices' areas
         Av = self._vertices_barycenters_areas()
 
         # Calculate final curvatures
-        curvatures = (np.array([
-            (2 * np.pi - np.sum(angles)) for angles in angels_per_vertex
-        ]) / Av)
+        curvatures = ((2 * np.pi) - np.array([np.sum(angles)
+                                              for angles in angels_per_vertex])) / Av
 
         return curvatures
 
     @property
     def gaussian_curvature(self) -> np.ndarray:
         """
+        A mesh property, containing the Gaussian curvature for each vertex.
 
-        :return:
+        :return: (np.ndarray) A NumPy array of shape (|V|, ), containing the
+        Gaussian curvature of each vertex.
         """
 
         return self._compute_gaussian_curvature()
