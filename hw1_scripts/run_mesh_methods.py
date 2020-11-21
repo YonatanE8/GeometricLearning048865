@@ -1,3 +1,6 @@
+import matplotlib
+matplotlib.use('TkAgg')
+
 from src import PROJECT_ROOT
 from src.geometry.mesh import Mesh
 
@@ -6,7 +9,7 @@ import glob
 
 
 data_dir = os.path.join(PROJECT_ROOT, 'data', 'example_off_files')
-file = glob.glob(os.path.join(data_dir, '*.off'))[1]
+file = glob.glob(os.path.join(data_dir, '*.off'))[0]
 
 # Load Mesh
 mesh = Mesh(file)
@@ -35,5 +38,8 @@ mesh = Mesh(file)
 # --- Visualize Faces & Vertices areas
 # mesh.render_surface(scalar_func='face_area')
 # mesh.render_surface(scalar_func='vertex_area')
+
+# --- Visualize the Euclidean distance of every vertex from the vertices centroid
+mesh.render_distance_from_centroid()
 
 

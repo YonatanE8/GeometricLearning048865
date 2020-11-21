@@ -4,6 +4,7 @@ from src.utils.io import read_off
 import numpy as np
 import pyvista as pv
 import scipy.sparse as sparse
+import matplotlib.pyplot as plt
 
 
 class Mesh(ABC):
@@ -661,6 +662,47 @@ class Mesh(ABC):
         """
 
         return self._compute_vertex_centroid()
+
+    def distance_from_centroid(self) -> np.ndarray:
+        """
+        A method for computing the Euclidean distance of every vertex in the mesh from
+        the vertices centroid.
+
+        :return: (np.ndarray) A NumPy array with shape (|V|, ) containing the
+        Euclidean distance of each vertex from the centroid
+        """
+
+        centroid = self.vertices_centroid
+        vertices = self._get_vertices_array()
+
+        distances = vertices - np.expand_dims(centroid, 0)
+        distances = np.sqrt(np.sum((np.power(distances, 2)), 1))
+
+        return distances
+
+    def render_distance_from_centroid(self) -> None:
+        """
+        A method for visualizing the Euclidean distance of every vertex from the
+        vertices centroid
+
+        :return: None
+        """
+
+        centroid = self.vertices_centroid
+        vertices = self._get_vertices_array()
+        distances = self.distance_from_centroid()
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        im = ax.scatter(vertices[:, 0], vertices[:, 1], vertices[:, 2], c=distances,
+                        zorder=0, s=10, alpha=0.2)
+        ax.scatter(centroid[0], centroid[1], centroid[2], c='k', zorder=1, s=250,
+                   alpha=1.0)
+        fig.colorbar(im)
+        plt.show()
+
+
+
 
 
 

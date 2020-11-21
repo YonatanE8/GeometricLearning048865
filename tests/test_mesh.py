@@ -390,3 +390,22 @@ class TestMesh:
         diff = np.sum(np.abs(centroid == np.array([0.5, 0.5, 0.5])))
 
         assert pytest.approx(diff, 0, 1e-8)
+
+    def test_distances_from_centroid(self, simple_cube):
+        mesh = Mesh(normals_unit_norm=False)
+        mesh.v = self.vertices
+        mesh.f = self.faces
+
+        distances = mesh.distance_from_centroid()
+
+        assert distances.shape == (len(mesh.v), )
+
+        gt_distances = np.array(
+            [(3 * (0.5 ** 2)) ** 0.5, ] * len(self.vertices)
+        )
+        diff = distances - gt_distances
+
+        assert pytest.approx(diff, 0, 1e-8)
+
+
+
