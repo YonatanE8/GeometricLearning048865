@@ -175,6 +175,64 @@ class Mesh(ABC):
 
         return self.vertices_degree
 
+    def _render_mesh(self, style: str, scalar_func: str = None,
+                     render_points_as_spheres: float = False,
+                     cmap: str = 'hot') -> None:
+        """
+        Utility method for rendering meshes
+
+        :param style: (str) The rendering style to use, should be 'wireframe',
+        'points' or 'surface'
+        :param scalar_func: (str) If not None, specifies by which scalar function to
+         color the mesh
+        :param render_points_as_spheres: (bool) whether to visualize the vertices as
+        spheres
+        :param cmap: (str) Colormap to use in the mesh's coloring
+
+        :return: None
+        """
+        vertices = self._get_vertices_array()
+        faces = self._get_faces_array()
+
+        if scalar_func is not None:
+            colors = None
+            if scalar_func == 'degree':
+                colors = np.sum(np.array(self.vertex_vertex_adjacency().todense()), 1)
+
+            elif scalar_func == 'coo':
+                colors = np.sqrt(np.sum(np.power(vertices, 2), 1))
+
+            elif scalar_func == 'inds':
+                colors = np.sum(faces, 1)
+
+            elif scalar_func == 'face_area':
+                colors = self.areas
+
+            elif scalar_func == 'vertex_area':
+                colors = self.barycenters_areas
+                colors = np.array([
+                    np.mean(colors[faces[f, 1:]]) for f in range(faces.shape[0])
+                ])
+
+            # For vertices based coloring with surface styles,
+            # where we need 1 color per face
+            if scalar_func in ('degree', 'coo') and style == 'surface':
+                colors = np.array([
+                    np.mean(colors[faces[f, 1:]]) for f in range(faces.shape[0])
+                ])
+
+        else:
+            colors = None
+
+        mesh = pv.PolyData(vertices, faces)
+        color_bar_args = {'fmt': "%.4f"}
+        plotter = pv.Plotter()
+        plotter.add_mesh(mesh, style=style, cmap=cmap,
+                         render_points_as_spheres=render_points_as_spheres,
+                         scalars=colors, scalar_bar_args=color_bar_args)
+        plotter.add_scalar_bar()
+        plotter.show()
+
     def render_wireframe(self) -> None:
         """
         Render the mesh's vertices in wireframe view using the PyVista package
@@ -182,13 +240,7 @@ class Mesh(ABC):
         :return: None
         """
 
-        vertices = self._get_vertices_array()
-        faces = self._get_faces_array()
-        mesh = pv.PolyData(vertices, faces)
-
-        plotter = pv.Plotter()
-        plotter.add_mesh(mesh, style='wireframe')
-        plotter.show()
+        self._render_mesh(style='wireframe', render_points_as_spheres=False)
 
     def render_pointcloud(self, scalar_func: str = 'degree') -> None:
         """
@@ -198,28 +250,16 @@ class Mesh(ABC):
         indicating the scalar value to use as color for the point-cloud visualization.
         Options are: 'degree' - uses the vertex's degree,
         and 'coo' - uses the coordinates RMS value. Defaults to 'degree'.
-        :return:
+
+        :return: None
         """
 
         # Validate input
         assert scalar_func in ('degree', 'coo'), \
             "'scalar_func' must be either 'degree' or 'coo'"
 
-        vertices = self._get_vertices_array()
-        faces = self._get_faces_array()
-
-        colors = None
-        if scalar_func == 'degree':
-            colors = np.sum(np.array(self.vertex_vertex_adjacency().todense()), 1)
-
-        elif scalar_func == 'coo':
-            colors = np.sqrt(np.sum(np.power(vertices, 2), 1))
-
-        mesh = pv.PolyData(vertices, faces)
-        plotter = pv.Plotter()
-        plotter.add_mesh(mesh, style='points', cmap='hot',
-                         render_points_as_spheres=True, scalars=colors)
-        plotter.show()
+        self._render_mesh(scalar_func=scalar_func, style='points', cmap='hot',
+                          render_points_as_spheres=True)
 
     def render_surface(self, scalar_func: str = 'inds') -> None:
         """
@@ -229,7 +269,8 @@ class Mesh(ABC):
         indicating the scalar value to use as color for the point-cloud visualization.
         Options are: 'degree' - uses the vertex's degree,
         and 'coo' - uses the coordinates RMS value. Defaults to 'degree'.
-        :return:
+
+        :return: None
         """
 
         # Validate input
@@ -237,39 +278,7 @@ class Mesh(ABC):
             "'scalar_func' must be either 'inds', 'degree', 'coo', " \
             "'face_area' or 'vertex_area'"
 
-        vertices = self._get_vertices_array()
-        faces = self._get_faces_array()
-
-        colors = None
-        if scalar_func == 'inds':
-            colors = np.sum(faces, 1)
-
-        elif scalar_func == 'degree':
-            colors = np.sum(np.array(self.vertex_vertex_adjacency().todense()), 1)
-
-        elif scalar_func == 'coo':
-            colors = np.sqrt(np.sum(np.power(vertices, 2), 1))
-
-        elif scalar_func == 'face_area':
-            colors = self.areas
-
-        # If using vertex-coloring function, interpolate colors for all faces
-        if scalar_func in ('degree', 'coo'):
-            colors = np.array([
-                np.mean(colors[faces[f, 1:]]) for f in range(faces.shape[0])
-            ])
-
-        elif scalar_func == 'vertex_area':
-            colors = self.barycenters_areas
-            colors = np.array([
-                np.mean(colors[faces[f, 1:]]) for f in range(faces.shape[0])
-            ])
-
-        mesh = pv.PolyData(vertices, faces)
-        plotter = pv.Plotter()
-        plotter.add_mesh(mesh, style='surface', cmap='hot',
-                         scalars=colors)
-        plotter.show()
+        self._render_mesh(scalar_func=scalar_func, style='surface', cmap='hot')
 
     def _faces_normals(self) -> (np.ndarray, np.ndarray):
         """
@@ -559,50 +568,68 @@ class Mesh(ABC):
 
         return self._compute_gaussian_curvature()
 
-    def render_vertices_normals(self, normalize: bool, add_norms: bool = False) -> None:
+    def _render_normals(self, normalize: bool, style: str, add_norms: bool = False,
+                        mag: float = 1., color_by: str = 'face'):
         """
-        A method for visualizing the normal vectors of all vertices in the mesh.
+        Utility method for visualizing normal vectors for vectors and faces of the mesh.
 
         :param normalize: (bool) Whether to normalize the normal vectors to
         have L2-norm = 1. Note that this is irrespective of whether the Mesh class was
         instantiated with normals_unit_norm = True or not.
+        :param style: (str) Plotting style for the underlying mesh,
+        must be either 'surface' or 'wireframe'.
         :param add_norms: (bool) Whether to also visualize the norm of each
         un-normalized vertex's normal.
+        :param mag: (float) Scalar to apply to the computed normals,
+        solely for visualization purposes.
+        :param color_by: (str) Used only if add_norms == True.
+        Must be either 'face' or 'vertex' and is used to specify whether to
+        color the mesh based on the vertices normals or faces normals.
 
         :return: None
         """
+
+        assert style in ('surface', 'wireframe'), \
+            f"the style parameter cannot be {style}, " \
+            f"it must be either 'wireframe' or 'surface'"
+        assert color_by in ('face', 'vertex'), \
+            f"the style parameter cannot be {color_by}, " \
+            f"it must be either 'face' or 'vertex'"
 
         vertices = self._get_vertices_array()
         faces = self._get_faces_array()
         mesh = pv.PolyData(vertices, faces)
         mesh.vectors = vertices
 
-        if add_norms:
-            arrows = mesh.glyph(orient="Normals", tolerance=0.05)
+        # Update the normalization rule just for this rendering
+        norm = self.unit_norm
+        self.unit_norm = normalize
+        normals = self.vertex_normals
+        self.unit_norm = norm
 
-            colors = self._compute_vertex_normals()[1]
-            colors = np.array([
-                np.mean(colors[faces[f, 1:]]) for f in range(faces.shape[0])
-            ])
+        if add_norms:
+            if color_by == 'face':
+                colors = self._faces_normals()[1]
+
+            elif color_by == 'vertex':
+                colors = self._compute_vertex_normals()[1]
+                colors = np.array([
+                    np.mean(colors[faces[f, 1:]]) for f in range(faces.shape[0])
+                ])
 
             plotter = pv.Plotter()
-            plotter.add_mesh(arrows, color="black", lighting=False)
-            plotter.add_mesh(mesh, style='surface', cmap='hot', scalars=colors)
-            plotter.show()
+            plotter.add_mesh(mesh, style=style, cmap='hot', scalars=colors)
+            plotter.add_arrows(mesh.points, normals, mag=mag)
 
         else:
-            if normalize:
-                arrows = mesh.glyph(scale="Normals", orient="Normals", tolerance=0.05)
-
-            else:
-                arrows = mesh.glyph(orient="Normals", tolerance=0.05)
-
             plotter = pv.Plotter()
-            plotter.add_mesh(arrows, color="black", lighting=False)
-            plotter.add_mesh(mesh, style="wireframe")
-            plotter.show()
+            plotter.add_mesh(mesh, style=style)
+            plotter.add_arrows(mesh.points, normals, mag=mag)
 
-    def render_faces_normals(self, normalize: bool, add_norms: bool = False) -> None:
+        plotter.show()
+
+    def render_vertices_normals(self, normalize: bool, add_norms: bool = False,
+                                mag: float = 1.) -> None:
         """
         A method for visualizing the normal vectors of all vertices in the mesh.
 
@@ -611,35 +638,34 @@ class Mesh(ABC):
         instantiated with normals_unit_norm = True or not.
         :param add_norms: (bool) Whether to also visualize the norm of each
         un-normalized vertex's normal.
+        :param mag: (float) Scalar to apply to the computed normals,
+        solely for visualization purposes.
 
         :return: None
         """
 
-        vertices = self._get_vertices_array()
-        faces = self._get_faces_array()
-        mesh = pv.PolyData(vertices, faces)
-        mesh.vectors = self.barycenters
+        style = 'surface' if add_norms else 'wireframe'
+        self._render_normals(normalize=normalize, add_norms=add_norms, mag=mag,
+                             style=style, color_by='vertex')
 
-        if add_norms:
-            arrows = mesh.glyph(orient="Normals", tolerance=0.05)
-            colors = self._faces_normals()[1]
+    def render_faces_normals(self, normalize: bool, add_norms: bool = False,
+                             mag: float = 1.) -> None:
+        """
+        A method for visualizing the normal vectors of all faces in the mesh.
 
-            plotter = pv.Plotter()
-            plotter.add_mesh(arrows, color="black", lighting=False)
-            plotter.add_mesh(mesh, style='surface', cmap='hot', scalars=colors)
-            plotter.show()
+        :param normalize: (bool) Whether to normalize the normal vectors to
+        have L2-norm = 1. Note that this is irrespective of whether the Mesh class was
+        instantiated with normals_unit_norm = True or not.
+        :param add_norms: (bool) Whether to also visualize the norm of each
+        un-normalized vertex's normal.
+        :param mag: (float) Scalar to apply to the computed normals,
+        solely for visualization purposes.
 
-        else:
-            if normalize:
-                arrows = mesh.glyph(scale="Normals", orient="Normals", tolerance=0.05)
+        :return: None
+        """
 
-            else:
-                arrows = mesh.glyph(orient="Normals", tolerance=0.05)
-
-            plotter = pv.Plotter()
-            plotter.add_mesh(arrows, color="black", lighting=False)
-            plotter.add_mesh(mesh, style='surface', cmap='hot')
-            plotter.show()
+        self._render_normals(normalize=normalize, add_norms=add_norms, mag=mag,
+                             style='surface', color_by='face')
 
     def _compute_vertex_centroid(self) -> np.ndarray:
         """

@@ -28,18 +28,20 @@ mesh = Mesh(file)
 # mesh.render_surface(scalar_func='coo')
 
 # --- Visualize vertices normals
-# mesh.render_vertices_normals(normalize=False)
-# mesh.render_vertices_normals(normalize=True)
+# mesh.render_vertices_normals(normalize=False, mag=5e7)
+# mesh.render_vertices_normals(normalize=True, mag=0.01)
+# mesh.render_vertices_normals(normalize=False, mag=5e7, add_norms=True)
 
 # --- Visualize faces normals
-# mesh.render_faces_normals(normalize=False)
-# mesh.render_faces_normals(normalize=True)
+# mesh.render_faces_normals(normalize=False, mag=5e7)
+# mesh.render_faces_normals(normalize=True, mag=0.01)
+# mesh.render_faces_normals(normalize=False, mag=5e7, add_norms=True)
 
 # --- Visualize Faces & Vertices areas
 # mesh.render_surface(scalar_func='face_area')
 # mesh.render_surface(scalar_func='vertex_area')
 
 # --- Visualize the Euclidean distance of every vertex from the vertices centroid
-mesh.render_distance_from_centroid()
+# mesh.render_distance_from_centroid()
 
 
