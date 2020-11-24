@@ -77,5 +77,3 @@ def write_off(data: Tuple[List, List], save_path: str):
         ]
 
 
-
-

@@ -38,10 +38,10 @@ f"InvoluteCircle: a = {a}",
 start = -20.
 end = 20.
 n_points = 20000
-interval = curves.Astroid().get_interval(start=start, end=end, n_points=n_points)
+interval = curves.Knot().get_interval(start=start, end=end, n_points=n_points)
 save_path = os.path.join(PROJECT_ROOT, 'data', 'images')
 os.makedirs(save_path, exist_ok=True)
-save_path = os.path.join(save_path, 'Astroid.png')
+save_path = os.path.join(save_path, 'Cusp.png')
 
 a_params = [-5, -2, -1, -0.5, 0.5, 1, 2, 5]
 b_params = [-5, -2, -1, -0.5, 0.5, 1, 2, 5]
@@ -60,5 +60,5 @@ params = [
 
 # Sweep over all parameters with a specific curve
 curves.sweep_curve(
-    curve_obj=curves.Astroid, interval=interval, params=params,
-    title="Astroid", save_path=save_path)
+    curve_obj=curves.Cusp, interval=interval, params=params,
+    title="Cusp", save_path=save_path)
