@@ -8,7 +8,7 @@ import os
 import glob
 
 
-data_dir = os.path.join(PROJECT_ROOT, 'data', 'example_off_files')
+data_dir = os.path.join(PROJECT_ROOT, 'data', 'off_files')
 file = glob.glob(os.path.join(data_dir, '*.off'))[0]
 
 # Load Mesh

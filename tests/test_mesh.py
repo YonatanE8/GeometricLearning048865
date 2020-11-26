@@ -71,7 +71,7 @@ class TestMesh:
         ]
 
     def test_mesh_init(self):
-        data_dir = os.path.join(PROJECT_ROOT, 'data', 'example_off_files')
+        data_dir = os.path.join(PROJECT_ROOT, 'data', 'off_files')
         file = glob.glob(os.path.join(data_dir, '*.off'))[0]
 
         # Load a mesh using read_off and using the Mesh class and assert that they
@@ -349,7 +349,7 @@ class TestMesh:
         assert ec == -2
 
         # Test the the Euler invariance theorem holds for a valid sample shape
-        data_dir = os.path.join(PROJECT_ROOT, 'data', 'example_off_files')
+        data_dir = os.path.join(PROJECT_ROOT, 'data', 'off_files')
         file = glob.glob(os.path.join(data_dir, '*.off'))[0]
 
         # Load Mesh
@@ -369,7 +369,7 @@ class TestMesh:
 
         # Test that the Gauss Bonnet Theorem holds for the an exemplary shape we
         # were given
-        data_dir = os.path.join(PROJECT_ROOT, 'data', 'example_off_files')
+        data_dir = os.path.join(PROJECT_ROOT, 'data', 'off_files')
         file = glob.glob(os.path.join(data_dir, '*.off'))[0]
 
         # Load Mesh

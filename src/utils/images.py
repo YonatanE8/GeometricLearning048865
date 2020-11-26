@@ -68,90 +68,97 @@ def apply_euler_steps_central_derviative(u: np.ndarray, t: int = 1,
     return u_t
 
 
-def heat_kernel(x: np.ndarray, n: int, t: float) -> np.ndarray:
+def heat_kernel(shape: tuple, t: float) -> np.ndarray:
     """
-    Defines the heat heat_kernel operator at time t according to the equation:
-    u(x, t) = (1 / (4 * pi * t)^(n / 2)) * exp((-1 / 4 * t) * x.T @ x)
+    Defines the heat heat_kernel operator at time t in the Fourier domain
+    u = exp(-pi^2 * xi^T @ (4 * t * I) @ xi)
 
-    :param x: (int) array x over which to compute the heat_kernel
+    :param shape: (tuple) a tuple of 2 ints denoting the shape of the image to which
+     we apply the heat kernel
     :param n: (int) number of rows/columns in the heat heat_kernel
     :param t: (float) time-point t
 
-    :return: (np.ndarray) The heat heat_kernel at time t with dimension n X n
+    :return: (np.ndarray) The heat heat_kernel at time t with dimension shape
     """
 
-    # kernel = ((1 / np.power((4 * np.pi * t), (n / 2))) *
-    #           np.exp((-1 / (4 * t)) * (x.T @ x)))
+    # Create the xi vectors
+    x = np.linspace(start=(-shape[0] / 2), stop=(shape[0] / 2), num=shape[0])
+    y = np.linspace(start=(-shape[1] / 2), stop=(shape[1] / 2), num=shape[1])
+    x, y = np.meshgrid(x, y)
 
-    kernel = - ((2 * np.pi) ** 2) * (x.T @ x) * t
+    # Compute the Fourier representation of the kernel
+    kernel = np.exp(-np.power(np.pi, 2) * (np.power(x, 2) + np.power(y, 2)) * t)
 
     return kernel
+
+
+def fourier_transform_im(image: np.ndarray) -> np.ndarray:
+    """
+    Computes the Fourier transform on the image and shifts it to the "typical"
+    representation that is shown.
+
+    :param image: (np.ndarray) A 2D numpy array, containing the image to transform
+
+    :return: (np.ndarray) The transformed image
+    """
+
+    fft2d_im = np.fft.fft2(image)
+    fft2d_im = np.fft.fftshift(fft2d_im)
+
+    return fft2d_im
+
+
+def inverse_fourier_transform(image: np.ndarray):
+    """
+    Computes the Inverse Fourier transform on the transformation of an image.
+    starts by shifting it back.
+
+    :param image: (np.ndarray) A 2D numpy array, containing the transformed image.
+
+    :return: (np.ndarray) The absolute values of the inverse-transformed image
+    (removes the imaginary part).
+    """
+
+    ifft2d_im = np.fft.ifftshift(image)
+    ifft2d_im = np.fft.ifft2(ifft2d_im)
+
+    return np.abs(ifft2d_im)
 
 
 def apply_2d_heat_kernel_step(u: np.ndarray, kernel: np.ndarray) -> np.ndarray:
     """
-    Applies a single step of the 2D heat equation via convolving the heat heat_kernel
-    with U.
+    Applies a single step of the 2D heat equation multiplying the heat kernel and the
+     image in the Fourier domain and then transforms the image back.
 
-    :param u: (np.ndarray) An array containing U_t
-    :param kernel: (np.ndarray) Heat heat_kernel to apply to U
+    :param u: (np.ndarray) An array containing the image at time t
+    :param kernel: (np.ndarray) the heat kernel at time t
 
-    :return: (np.ndarray) An array containing U_t+1
+    :return: (np.ndarray) An array containing the image at time t after applying
+    the heat kernel
     """
 
-    f_im = fourier_transform(u)
+    # Compute the Fourier transform of the image
+    image = fourier_transform_im(u)
 
-    return signal.fftconvolve(u, kernel, 'same')
+    # Apply the heat kernel in the spectral domain
+    image = np.multiply(kernel, image)
 
+    # Transform the image back
+    image = inverse_fourier_transform(image)
 
-def gaussian(shape, kappa=1, t=.001):
-    # Gaussian Kernel for the Heat kernel in Fourier domain
-    n, k = shape
-    center_i = int(n / 2)
-    center_j = int(k / 2)
-
-    # This image is symmetric so we do one quadrant and fill in the others
-    kernel = np.zeros((n, k))
-    for i in range(0, n - center_i):
-        for j in range(0, k - center_j):
-            temp = np.exp(-(i ** 2 + j ** 2) * kappa * t)
-            kernel[center_i + i, center_j + j] = temp
-            kernel[center_i - i, center_j + j] = temp
-            kernel[center_i + i, center_j - j] = temp
-            kernel[center_i - i, center_j - j] = temp
-
-    return kernel
+    return image
 
 
-def fourier_transform(image):
-    """
-    Computes the Fourier transform on the image and shifts it to the "typical"
-    representation that is shown.
-    """
-
-    temp = np.fft.fft2(image)
-
-    # Remember to shift
-    temp = np.fft.fftshift(temp)
-
-    return temp
-
-
-def inverse_fourier_transform(f_input_imag):
-    imag = np.fft.ifftshift(f_input_imag)
-    imag = np.fft.ifft2(imag)
-    return np.abs(imag) ** 2  # Remove those imaginary values
-
-
-def apply_2d_heat_kernel(u: np.ndarray, heat_kernel: Callable = heat_kernel,
+def apply_2d_heat_kernel(u: np.ndarray, spectral_kernel: Callable = heat_kernel,
                          t: int = 1, dt: float = 0.1) -> Sequence[np.ndarray]:
     """
     Applies t / dt steps of the 2D heat equation via convolving the heat kernel with U
     t / dt times.
 
     :param u: (np.ndarray) An array containing U_0
-    :param heat_kernel: (Callable) a function which takes inputs x, n & t and returns a
-    np.ndarray of shape [len(x), ] representing the heat kernel at time t over x.
+    :param spectral_kernel: (Callable) a function which takes inputs 'shape' & t,
+    and returns a np.ndarray of shape 'shape' representing the kernel in the
+    spectral domain at time t.
     :param t: (int) The temporal length for which to apply steps to, defaults to 1
     :param dt: (float) The size of the temporal change, defaults to 0.1
 
@@ -160,36 +167,19 @@ def apply_2d_heat_kernel(u: np.ndarray, heat_kernel: Callable = heat_kernel,
 
     assert dt < t, f"dt must be smaller then t, but received dt = {dt}, and t = {t}"
 
-    # Define the heat heat_kernel, we work in 2D
-    n = 2
-    m, k = u.shape
-
     # Start with U_0
     u_t = [u.copy(), ]
     current_t = dt
-
-    # Define the grid for the heat heat_kernel
-    # x1 = np.linspace(start=(m // 2), stop=0, num=(m // 2), dtype=np.int)
-    # x1 = np.concatenate((x1[::-1], x1), 0)
-    # x = np.expand_dims(x1, 0)
-    # x = x / x.max()
-    # x2 = np.linspace(start=(k // 2), stop=0, num=(k // 2), dtype=np.int)
-    # x2 = np.concatenate((x2[::-1], x2), 0)
-    # x2 = np.expand_dims(x2, 0)
-    # x = x1.T @ x1
-    # x = x / x.max()
+    shape = u.shape
 
     # Iterate over time
     steps = int(t / dt)
     for step in range(steps):
-        # kernel = heat_kernel(x=x, n=n, t=current_t)
-        kernel = gaussian(u.shape, kappa=4, t=current_t)
-        u_temp = fourier_transform(u_t[-1].copy())
-        u_temp = np.multiply(u_temp, kernel)
-        u_temp = inverse_fourier_transform(u_temp.copy())
-
-        # u_temp = apply_2d_heat_kernel_step(u=u_t[-1].copy(), kernel=kernel)
+        kernel = spectral_kernel(shape=shape, t=current_t)
+        u_temp = apply_2d_heat_kernel_step(u=u_t[-1], kernel=kernel)
+        u_t.append(u_temp.copy())
         current_t += dt
-        u_t.append(u_temp)
 
     return u_t
+
+

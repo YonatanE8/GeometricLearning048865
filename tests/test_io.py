@@ -10,7 +10,7 @@ import numpy as np
 
 @pytest.fixture
 def reference_off_files():
-    data_dir = os.path.join(PROJECT_ROOT, 'data', 'example_off_files')
+    data_dir = os.path.join(PROJECT_ROOT, 'data', 'off_files')
     files = glob.glob(os.path.join(data_dir, '*.off'))
 
     return files
