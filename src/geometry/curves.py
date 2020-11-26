@@ -2,7 +2,7 @@ import matplotlib
 
 matplotlib.use('TkAgg')
 
-from abc import ABC, abstractmethod
+from abc import ABC
 from typing import Callable
 from scipy.integrate import quad
 from matplotlib import pyplot as plt
@@ -12,16 +12,20 @@ import numpy as np
 
 class Curve(ABC):
     """
-
+    A class describing a curve via explicitly describing its x & y parameterizations
     """
 
     def __init__(self, x_parametrization: Callable, y_parametrization: Callable,
-                 curvature_computation_method: str = 'xy'):
+                 curvature_computation_method: str = 'xy', grad_max: float = 1e3,
+                 eps: float = 1e-6, grad_window_size: int = 100):
         """
         Initialize a curve object
 
         :param x_parametrization:
         :param y_parametrization:
+        :param curvature_computation_method:
+        :param grad_max:
+        :param grad_window_size:
         """
 
         assert curvature_computation_method in ('xy', 'c_prime_sq')
@@ -29,6 +33,9 @@ class Curve(ABC):
         self.x_parametrization = x_parametrization
         self.y_parametrization = y_parametrization
         self.curvature_computation_method = curvature_computation_method
+        self.grad_max = grad_max
+        self.eps = eps
+        self.grad_window_size = grad_window_size
 
     @staticmethod
     def get_interval(start: float = 0., end: float = 1.,
@@ -155,6 +162,7 @@ class Curve(ABC):
     def curvature(self, t: np.ndarray) -> np.ndarray:
         """
 
+        :param t:
         :return:
         """
 
@@ -187,25 +195,96 @@ class Curve(ABC):
 
         return curvature_ * normal
 
-    # @abstractmethod
-    # def grad(self, t: np.ndarray) -> np.ndarray:
-    #     """
-    #
-    #     :param t:
-    #     :return:
-    #     """
-    #
-    #     raise NotImplemented
-    #
-    # @abstractmethod
-    # def grad_sq(self, t: np.ndarray) -> np.ndarray:
-    #     """
-    #
-    #     :param t:
-    #     :return:
-    #     """
-    #
-    #     raise NotImplemented
+    def _stabilize_window(self, window: np.ndarray) -> float:
+        """
+
+        :param window:
+        :return:
+        """
+
+        val = np.mean(window).item()
+        std = np.std(window).item()
+        sign = np.sign(window[len(window) // 2]).item()
+
+        return val + (sign * std)
+
+    def _stabilize_gradients(self, grads: np.ndarray) -> np.ndarray:
+        """
+        Utility method for stabilizing
+
+        :param grads:
+        :return:
+        """
+
+        # Create a copy so as not to jeapordize the original gradients
+        stable_grads = grads.copy()
+
+        # Find indices of troublesome gradients
+        high_unstable_inds = np.where(np.abs(stable_grads) > self.grad_max)[0]
+        low_unstable_inds = np.where(((1 / np.abs(stable_grads)) + self.eps) >
+                                     self.grad_max)[0]
+
+        # Pad with zeros and smooth over unstable values
+        zeros = np.zeros((self.grad_window_size,))
+        padded_stable_grads = np.concatenate([zeros, stable_grads, zeros])
+        padded_stable_grads[self.grad_window_size:-self.grad_window_size] = [
+            self._stabilize_window(
+                padded_stable_grads[
+                 (i - self.grad_window_size // 2):(i + self.grad_window_size // 2)])
+            for i in range(self.grad_window_size,
+                           len(padded_stable_grads) - self.grad_window_size)
+        ]
+        stable_grads[high_unstable_inds] = [
+            padded_stable_grads[ind + self.grad_window_size]
+            for ind in high_unstable_inds]
+        stable_grads[low_unstable_inds] = [
+            padded_stable_grads[ind + self.grad_window_size]
+            for ind in low_unstable_inds]
+
+        # Find indices of gradients which are still troublesome
+        high_unstable_inds = np.where(np.abs(stable_grads) > self.grad_max)[0]
+        low_unstable_inds = np.where(((1 / np.abs(stable_grads)) + self.eps) >
+                                     self.grad_max)[0]
+
+        # Clip extreme values
+        stable_grads[high_unstable_inds] = (np.sign(grads[low_unstable_inds]) *
+                                            self.grad_max)
+        stable_grads[low_unstable_inds] = (np.sign(grads[low_unstable_inds]) *
+                                           (1 / self.grad_max))
+
+        return stable_grads
+
+    def grad(self, t: np.ndarray) -> (np.ndarray, np.ndarray):
+        """
+
+        :param t:
+        :return:
+        """
+
+        x, y = self.generate_curve(t)
+        x_grad = x[1:] - x[:-1]
+        y_grad = y[1:] - y[:-1]
+
+        x_grad = self._stabilize_gradients(x_grad)
+        y_grad = self._stabilize_gradients(y_grad)
+
+        return x_grad, y_grad
+
+    def grad_sq(self, t: np.ndarray) -> (np.ndarray, np.ndarray):
+        """
+
+        :param t:
+        :return:
+        """
+
+        x_grad, y_grad = self.grad(t)
+        x_grad = x_grad[1:] - x_grad[:-1]
+        y_grad = y_grad[1:] - y_grad[:-1]
+
+        x_grad = self._stabilize_gradients(x_grad)
+        y_grad = self._stabilize_gradients(y_grad)
+
+        return x_grad, y_grad
 
 
 class Astroid(Curve):
@@ -229,38 +308,6 @@ class Astroid(Curve):
                                       y_parametrization=y_param)
 
         self.a = a
-
-    # def grad(self, t: np.ndarray) -> np.ndarray:
-    #     """
-    #
-    #     :param t:
-    #     :return:
-    #     """
-    #
-    #     x_prime = self.a * 3 * np.power(np.cos(t), 2) * (-np.sin(t))
-    #     y_prime = self.a * 3 * np.power(np.sin(t), 2) * np.cos(t)
-    #
-    #     return np.array(
-    #         [x_prime, y_prime]
-    #     )
-    #
-    # def grad_sq(self, t: np.ndarray) -> np.ndarray:
-    #     """
-    #
-    #     :param t:
-    #     :return:
-    #     """
-    #
-    #     x_prime_prime = (self.a * 3 *
-    #                      ((2 * np.cos(t) * np.sin(t) * np.sin(t)) +
-    #                       (-np.cos(t) * np.power(np.cos(t), 2))))
-    #     y_prime_prime = (self.a * 3 *
-    #                      ((2 * np.sin(t)) * np.cos(t) * np.cos(t)) +
-    #                      (-np.power(np.sin(t), 2) * np.cos(t) * np.sun(t)))
-    #
-    #     return np.array(
-    #         [x_prime_prime, y_prime_prime]
-    #     )
 
 
 class Cardioid(Curve):
@@ -526,6 +573,8 @@ def sweep_curve(curve_obj: Curve, interval: np.ndarray, params: [dict, ...] = ()
         curve = curve_obj(**p)
         curve.plot_curve(interval=interval, title=title, fig=fig, ax=ax, show=False)
 
+    plt.legend([', '.join([f"{key} = {p[key]}" for key in p]) for p in params])
+
     if save_path is not None:
         if not save_path.endswith('.png'):
             save_path = save_path + '.png'
@@ -533,4 +582,3 @@ def sweep_curve(curve_obj: Curve, interval: np.ndarray, params: [dict, ...] = ()
         fig.savefig(save_path, dpi=300, orientation='landscape', format='png')
 
     plt.show()
-
