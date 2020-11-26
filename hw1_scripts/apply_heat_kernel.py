@@ -6,16 +6,18 @@ import os
 # Setup
 image_path = os.path.join(PROJECT_ROOT, 'data', 'images', 'cameraman.jpg')
 save_path = os.path.join(PROJECT_ROOT, 'data', 'images', 'cameraman_heat_kernel.gif')
-t = 0.004
-dt = 0.0001
+t = 1
+dt = 0.1
 dx = 1
 dy = 1
 
 # Euler iterations
-# plot_euler_iterations(image_path=image_path, t=t, dt=dt, dx=dx, dy=dy,
-#                       save_path=save_path)
+plot_euler_iterations(image_path=image_path, t=t, dt=dt, dx=dx, dy=dy,
+                      save_path=save_path)
 
 # Heat Kernel
+t = 0.004
+dt = 0.0001
 plot_heat_kernel(image_path=image_path, t=t, dt=dt, save_path=save_path)
 
 
