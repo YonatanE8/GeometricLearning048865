@@ -254,6 +254,19 @@ class Curve(ABC):
 
         return stable_grads
 
+    def _diff_xy(self, x: np.ndarray, y: np.ndarray) -> (np.ndarray, np.ndarray):
+        """
+
+        :param x:
+        :param y:
+        :return:
+        """
+
+        x_diff = x[1:] - x[:-1]
+        y_diff = y[1:] - y[:-1]
+
+        return x_diff, y_diff
+
     def grad(self, t: np.ndarray) -> (np.ndarray, np.ndarray):
         """
 
@@ -262,8 +275,7 @@ class Curve(ABC):
         """
 
         x, y = self.generate_curve(t)
-        x_grad = x[1:] - x[:-1]
-        y_grad = y[1:] - y[:-1]
+        x_grad, y_grad = self._diff_xy(x, y)
 
         x_grad = self._stabilize_gradients(x_grad)
         y_grad = self._stabilize_gradients(y_grad)
@@ -278,8 +290,7 @@ class Curve(ABC):
         """
 
         x_grad, y_grad = self.grad(t)
-        x_grad = x_grad[1:] - x_grad[:-1]
-        y_grad = y_grad[1:] - y_grad[:-1]
+        x_grad, y_grad = self._diff_xy(x_grad, y_grad)
 
         x_grad = self._stabilize_gradients(x_grad)
         y_grad = self._stabilize_gradients(y_grad)
