@@ -75,96 +75,6 @@ class Curve(ABC):
 
         return x, y
 
-    def unit_tangent(self, t: np.ndarray) -> np.ndarray:
-        """
-
-        :param t:
-        :return:
-        """
-
-        c_prime = self.grad(t)
-        tangent = c_prime / np.linalg.norm(c_prime)
-
-        return tangent
-
-    def arc_length(self, t: np.ndarray) -> float:
-        """
-
-        :param t:
-        :return:
-        """
-
-        def integrand(t: np.ndarray) -> np.ndarray:
-            c_prime = np.linalg.norm(self.grad(t))
-
-            return c_prime
-
-        arc_length = quad(func=integrand, a=t[0], b=t[1])
-
-        return arc_length[0]
-
-    def unit_normal(self, t: np.ndarray) -> np.ndarray:
-        """
-
-        :param t:
-        :return:
-        """
-
-        unit_tangent = self.unit_tangent(t)
-
-        if len(unit_tangent) == 2:
-            normal = np.array(
-                [-unit_tangent[1], unit_tangent[0]]
-            )
-
-        else:
-            j = np.array(
-                [
-                    [0, -1],
-                    [1, 0]
-                ]
-            )
-
-            normal = np.matmul(j, unit_tangent)
-
-        return normal
-
-    def curvature(self, t: np.ndarray) -> np.ndarray:
-        """
-
-        :param t:
-        :return:
-        """
-
-        if self.curvature_computation_method == 'xy':
-            g = self.grad(t)
-            g_sq = self.grad_sq(t)
-
-            nominator = g[0] * g_sq[1] - g[1] * g_sq[0]
-            denominator = np.power((np.power(g[0], 2) + np.power(g[1], 2)), 1.5)
-
-            curveature_ = nominator / denominator
-
-        elif self.curvature_computation_method == 'c_prime_sq':
-            unit_normal = self.unit_normal(t)
-            grad_sq = self.grad_sq(t)
-
-            curveature_ = np.matmul(unit_normal, grad_sq)
-
-        return curveature_
-
-    def unit_tangent_prime(self, t: np.ndarray) -> np.ndarray:
-        """
-
-        :param t:
-        :return:
-        """
-
-        normal = self.unit_normal(t)
-        curvature_ = self.curvature(t)
-
-        return curvature_ * normal
-
     def grad(self, t: np.ndarray) -> (np.ndarray, np.ndarray):
         """
 
@@ -188,6 +98,95 @@ class Curve(ABC):
         y_grad = egrad(egrad(self.y_parametrization))(t)
 
         return x_grad, y_grad
+
+    def tangent(self, t: np.ndarray) -> np.ndarray:
+        """
+
+        :param t:
+        :return:
+        """
+
+        c_prime_x, c_prime_y = self.grad(t)
+        tangent_x = c_prime_x / np.linalg.norm(c_prime_x)
+        tangent_y = c_prime_y / np.linalg.norm(c_prime_y)
+
+        tangent = np.concatenate(
+            [np.expand_dims(tangent_x, 1), np.expand_dims(tangent_y, 1)], 1
+        )
+
+        return tangent
+
+    def arc_length(self, t: np.ndarray) -> float:
+        """
+
+        :param t:
+        :return:
+        """
+
+        def integrand(t: np.ndarray) -> np.ndarray:
+            grad_x, grad_y = self.grad(t)
+            c_prime = np.sqrt((np.power(grad_x, 2) + np.power(grad_y, 2)))
+
+            return c_prime
+
+        arc_length = quad(func=integrand, a=t[0], b=t[1])
+
+        return arc_length[0]
+
+    def normal(self, t: np.ndarray) -> np.ndarray:
+        """
+
+        :param t:
+        :return:
+        """
+
+        tangent = self.tangent(t)
+
+        # For the 2D case we can always use this
+        normal = np.array(
+            [-tangent[:, 1], tangent[:, 0]]
+        )
+
+        return normal
+
+    def curvature(self, t: np.ndarray) -> np.ndarray:
+        """
+
+        :param t:
+        :return:
+        """
+
+        if self.curvature_computation_method == 'xy':
+            grad_x, grad_y = self.grad(t)
+            grad_sq_x, grad_sq_y = self.grad_sq(t)
+
+            nominator = grad_x * grad_sq_y - grad_y * grad_sq_x
+            denominator = np.power((np.power(grad_x, 2) + np.power(grad_y, 2)), 1.5)
+
+            curveature_ = nominator / denominator
+
+        elif self.curvature_computation_method == 'c_prime_sq':
+            normal = self.normal(t)
+            grad_sq_x, grad_sq_y = self.grad_sq(t)
+            grads_sq = np.concatenate(
+                [np.expand_dims(grad_sq_x, 1), np.expand_dims(grad_sq_y, 1)], 1
+            )
+
+            curveature_ = np.matmul(normal, grads_sq)
+
+        return curveature_
+
+    def tangent_prime(self, t: np.ndarray) -> np.ndarray:
+        """
+
+        :param t:
+        :return:
+        """
+
+        normal = self.normal(t)
+        curvature_ = self.curvature(t)
+
+        return curvature_ * normal
 
 
 class Astroid(Curve):
