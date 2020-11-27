@@ -106,13 +106,21 @@ class Curve(ABC):
         :return:
         """
 
+        # Compute C'
         c_prime_x, c_prime_y = self.grad(t)
-        tangent_x = c_prime_x / np.linalg.norm(c_prime_x)
-        tangent_y = c_prime_y / np.linalg.norm(c_prime_y)
-
-        tangent = np.concatenate(
-            [np.expand_dims(tangent_x, 1), np.expand_dims(tangent_y, 1)], 1
+        c_prime = np.concatenate(
+            [np.expand_dims(c_prime_x, 1), np.expand_dims(c_prime_y, 1)], 1
         )
+
+        # Handle singularities
+        zero_inds = np.where(np.sum(np.abs(c_prime), 1) == 0)[0]
+        if len(zero_inds):
+            c_prime[zero_inds] = np.ones((len(zero_inds), )) * 1e-6
+
+        # Compute the norm
+        c_prime_norm = np.linalg.norm(c_prime)
+
+        tangent = c_prime / c_prime_norm
 
         return tangent
 
