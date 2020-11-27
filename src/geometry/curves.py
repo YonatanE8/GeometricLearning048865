@@ -12,8 +12,7 @@ class Curve(ABC):
     """
 
     def __init__(self, x_parametrization: Callable, y_parametrization: Callable,
-                 curvature_computation_method: str = 'xy', grad_max: float = 1e3,
-                 eps: float = 1e-6, grad_window_size: int = 100):
+                 curvature_computation_method: str = 'xy'):
         """
         Initialize a curve object
 
@@ -29,9 +28,6 @@ class Curve(ABC):
         self.x_parametrization = x_parametrization
         self.y_parametrization = y_parametrization
         self.curvature_computation_method = curvature_computation_method
-        self.grad_max = grad_max
-        self.eps = eps
-        self.grad_window_size = grad_window_size
 
     @staticmethod
     def get_interval(start: float = 0., end: float = 1.,
@@ -168,78 +164,6 @@ class Curve(ABC):
         curvature_ = self.curvature(t)
 
         return curvature_ * normal
-
-    def _stabilize_window(self, window: np.ndarray) -> float:
-        """
-
-        :param window:
-        :return:
-        """
-
-        val = np.mean(window).item()
-        std = np.std(window).item()
-        sign = np.sign(window[len(window) // 2]).item()
-
-        return val + (sign * std)
-
-    def _stabilize_gradients(self, grads: np.ndarray) -> np.ndarray:
-        """
-        Utility method for stabilizing
-
-        :param grads:
-        :return:
-        """
-
-        # Create a copy so as not to jeapordize the original gradients
-        stable_grads = grads.copy()
-
-        # Find indices of troublesome gradients
-        high_unstable_inds = np.where(np.abs(stable_grads) > self.grad_max)[0]
-        low_unstable_inds = np.where(((1 / np.abs(stable_grads)) + self.eps) >
-                                     self.grad_max)[0]
-
-        # Pad with zeros and smooth over unstable values
-        zeros = np.zeros((self.grad_window_size,))
-        padded_stable_grads = np.concatenate([zeros, stable_grads, zeros])
-        padded_stable_grads[self.grad_window_size:-self.grad_window_size] = [
-            self._stabilize_window(
-                padded_stable_grads[
-                 (i - self.grad_window_size // 2):(i + self.grad_window_size // 2)])
-            for i in range(self.grad_window_size,
-                           len(padded_stable_grads) - self.grad_window_size)
-        ]
-        stable_grads[high_unstable_inds] = [
-            padded_stable_grads[ind + self.grad_window_size]
-            for ind in high_unstable_inds]
-        stable_grads[low_unstable_inds] = [
-            padded_stable_grads[ind + self.grad_window_size]
-            for ind in low_unstable_inds]
-
-        # Find indices of gradients which are still troublesome
-        high_unstable_inds = np.where(np.abs(stable_grads) > self.grad_max)[0]
-        low_unstable_inds = np.where(((1 / np.abs(stable_grads)) + self.eps) >
-                                     self.grad_max)[0]
-
-        # Clip extreme values
-        stable_grads[high_unstable_inds] = (np.sign(grads[low_unstable_inds]) *
-                                            self.grad_max)
-        stable_grads[low_unstable_inds] = (np.sign(grads[low_unstable_inds]) *
-                                           (1 / self.grad_max))
-
-        return stable_grads
-
-    def _diff_xy(self, x: np.ndarray, y: np.ndarray) -> (np.ndarray, np.ndarray):
-        """
-
-        :param x:
-        :param y:
-        :return:
-        """
-
-        x_diff = x[1:] - x[:-1]
-        y_diff = y[1:] - y[:-1]
-
-        return x_diff, y_diff
 
     def grad(self, t: np.ndarray) -> (np.ndarray, np.ndarray):
         """
