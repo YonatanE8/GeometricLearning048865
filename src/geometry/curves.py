@@ -131,9 +131,15 @@ class Curve(ABC):
         :return:
         """
 
-        def integrand(t: np.ndarray) -> np.ndarray:
-            grad_x, grad_y = self.grad(t)
-            c_prime = np.sqrt((np.power(grad_x, 2) + np.power(grad_y, 2)))
+        # grad_x, grad_y = self.grad(t)
+        # integrand = np.hypot(grad_x, grad_y)
+        # arc_length = np.sum(integrand)
+        #
+        # return arc_length
+
+        def integrand(val: float) -> np.ndarray:
+            grad_x, grad_y = self.grad(np.array([val, ]))
+            c_prime = np.hypot(grad_x, grad_y)
 
             return c_prime
 
@@ -484,3 +490,22 @@ class Sinus(Curve):
         super(Sinus, self).__init__(x_parametrization=x_param,
                                     y_parametrization=y_param)
 
+
+class HalfCircle(Curve):
+    """
+
+    """
+
+    def __init__(self):
+        """
+
+        """
+
+        def x_param(t: np.ndarray):
+            return t
+
+        def y_param(t: np.ndarray):
+            return 1 - np.power(t, 2)
+
+        super(HalfCircle, self).__init__(x_parametrization=x_param,
+                                         y_parametrization=y_param)

@@ -12,6 +12,14 @@ def sin_curve():
     return curve, interval
 
 
+@pytest.fixture
+def half_circle_curve():
+    curve = curves.HalfCircle()
+    interval = curve.get_interval(start=-1, end=1, n_points=1000)
+
+    return curve, interval
+
+
 class TestCurve:
     def test_generate_curve(self, sin_curve):
         curve, _ = sin_curve
@@ -22,8 +30,8 @@ class TestCurve:
         t = np.linspace(start=0, stop=(2 * np.pi), num=100)
         sin = np.sin(t)
 
-        assert pytest.approx(np.sum(np.abs(x - t)), 0, 1e-4)
-        assert pytest.approx(np.sum(np.abs(y - sin)), 0, 1e-4)
+        assert np.sum(np.abs(x - t)) == pytest.approx(0, 1e-4)
+        assert np.sum(np.abs(y - sin)) == pytest.approx(0, 1e-4)
 
     def test_grad(self, sin_curve):
         curve, interval = sin_curve
@@ -31,8 +39,8 @@ class TestCurve:
 
         cos = np.cos(interval)
 
-        assert pytest.approx(np.sum(np.abs(x_grad - np.ones_like(x_grad))), 0, 1e-6)
-        assert pytest.approx(np.sum(np.abs(y_grad - cos)), 0, 1e-6)
+        assert np.sum(np.abs(x_grad - np.ones_like(x_grad))) == pytest.approx(0, 1e-6)
+        assert np.sum(np.abs(y_grad - cos)) == pytest.approx(0, 1e-6)
 
     def test_grad_sq(self, sin_curve):
         curve, interval = sin_curve
@@ -40,8 +48,8 @@ class TestCurve:
 
         sin = -np.sin(interval)
 
-        assert pytest.approx(np.sum(np.abs(x_grad - np.zeros_like(x_grad))), 0, 1e-6)
-        assert pytest.approx(np.sum(np.abs(y_grad - sin)), 0, 1e-6)
+        assert np.sum(np.abs(x_grad - np.zeros_like(x_grad))) == pytest.approx(0, 1e-6)
+        assert np.sum(np.abs(y_grad - sin)) == pytest.approx(0, 1e-6)
 
     def test_tangent(self, sin_curve):
         curve, interval = sin_curve
@@ -52,4 +60,19 @@ class TestCurve:
 
         # Tangent norm should always be 1
         assert np.sum(np.linalg.norm(tangent) - np.ones_like(tangent)) == 0
+
+    def test_arclength(self, half_circle_curve):
+        curve, interval = half_circle_curve
+        arc_len = curve.arc_length(interval)
+        analytic_arc_len = np.pi
+
+        assert (np.abs(arc_len - analytic_arc_len)) == pytest.approx(0, 1e-6)
+
+
+
+
+
+
+
+
 
