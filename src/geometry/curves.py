@@ -1,13 +1,9 @@
-import matplotlib
-
-matplotlib.use('TkAgg')
-
 from abc import ABC
 from typing import Callable
 from scipy.integrate import quad
-from matplotlib import pyplot as plt
+from autograd import elementwise_grad as egrad
 
-import numpy as np
+import autograd.numpy as np
 
 
 class Curve(ABC):
@@ -52,6 +48,24 @@ class Curve(ABC):
 
         return interval
 
+    def _generate_x(self, interval: np.ndarray) -> np.ndarray:
+        """
+
+        """
+
+        x = self.x_parametrization(interval)
+
+        return x
+
+    def _generate_y(self, interval: np.ndarray) -> np.ndarray:
+        """
+
+        """
+
+        y = self.y_parametrization(interval)
+
+        return y
+
     def generate_curve(self, interval: np.ndarray) -> (np.ndarray, np.ndarray):
         """
 
@@ -60,50 +74,10 @@ class Curve(ABC):
         :return
         """
 
-        x = self.x_parametrization(interval)
-        y = self.y_parametrization(interval)
+        x = self._generate_x(interval)
+        y = self._generate_y(interval)
 
         return x, y
-
-    def plot_curve(self, interval: np.ndarray, title: str = '',
-                   save_path: str = None, fig: plt.Figure = None,
-                   ax: plt.Axes = None, show: bool = True) -> None:
-        """
-
-        :param interval:
-        :param title:
-        :param save_path:
-        :param fig:
-        :param ax:
-        :param show:
-
-        :return
-        """
-
-        # Get the curve to be plotted
-        x, y = self.generate_curve(interval)
-
-        if fig is None:
-            fig, ax = plt.subplots(figsize=[11, 11])
-            ax.plot(x, y)
-            ax.xlabel("X[t]")
-            ax.ylabel("Y[t]")
-            ax.title(title)
-
-        else:
-            ax.plot(x, y)
-            ax.set_xlabel("X[t]")
-            ax.set_ylabel("Y[t]")
-            ax.set_title(title)
-
-        if show:
-            plt.show()
-
-        if save_path is not None:
-            if not save_path.endswith('.png'):
-                save_path = save_path + '.png'
-
-            fig.savefig(save_path, dpi=300, orientation='landscape', format='png')
 
     def unit_tangent(self, t: np.ndarray) -> np.ndarray:
         """
@@ -274,11 +248,8 @@ class Curve(ABC):
         :return:
         """
 
-        x, y = self.generate_curve(t)
-        x_grad, y_grad = self._diff_xy(x, y)
-
-        x_grad = self._stabilize_gradients(x_grad)
-        y_grad = self._stabilize_gradients(y_grad)
+        x_grad = egrad(self.x_parametrization)(t)
+        y_grad = egrad(self.y_parametrization)(t)
 
         return x_grad, y_grad
 
@@ -289,11 +260,8 @@ class Curve(ABC):
         :return:
         """
 
-        x_grad, y_grad = self.grad(t)
-        x_grad, y_grad = self._diff_xy(x_grad, y_grad)
-
-        x_grad = self._stabilize_gradients(x_grad)
-        y_grad = self._stabilize_gradients(y_grad)
+        x_grad = egrad(egrad(self.x_parametrization))(t)
+        y_grad = egrad(egrad(self.y_parametrization))(t)
 
         return x_grad, y_grad
 
@@ -565,31 +533,23 @@ class Knot(Curve):
         self.a = a
 
 
-def sweep_curve(curve_obj: Curve, interval: np.ndarray, params: [dict, ...] = (),
-                title: str = '', save_path: str = None) -> None:
+class Sinus(Curve):
     """
 
-    :param curve_obj:
-    :param interval:
-    :param params:
-    :param title:
-    :param save_path:
-
-    :return
     """
 
-    fig, ax = plt.subplots(figsize=[11, 11])
+    def __init__(self):
+        """
 
-    for p in params:
-        curve = curve_obj(**p)
-        curve.plot_curve(interval=interval, title=title, fig=fig, ax=ax, show=False)
+        :param a:
+        """
 
-    plt.legend([', '.join([f"{key} = {p[key]}" for key in p]) for p in params])
+        def x_param(t: np.ndarray):
+            return t
 
-    if save_path is not None:
-        if not save_path.endswith('.png'):
-            save_path = save_path + '.png'
+        def y_param(t: np.ndarray):
+            return np.sin(t)
 
-        fig.savefig(save_path, dpi=300, orientation='landscape', format='png')
+        super(Sinus, self).__init__(x_parametrization=x_param,
+                                    y_parametrization=y_param)
 
-    plt.show()
