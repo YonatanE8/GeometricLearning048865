@@ -65,20 +65,20 @@ f"InvoluteCircle: a = {a}",
 #     curve_obj=curves.Cusp, interval=interval, params=params,
 #     title="Cusp", save_path=save_path)
 
-n_intervals = 5
-starts = [((4 ** i) - 1) for i in range(0, (n_intervals * 2) + 1, 2)]
-ends = [(4 ** (i + 1)) for i in range(0, (n_intervals * 2) + 1, 2)]
-n_points = 1000
+start = 0
+end = 1000
+n_points = 10000
 a = 2
 b = 1
 c = 2
-curve_obj = curves.Conchoid(a=a)
-intervals = [curve_obj.get_interval(start=starts[i], end=ends[i], n_points=n_points)
-             for i in range(n_intervals)]
+# curve_obj = curves.Astroid(a=a)
+# curve_obj = curves.Epicycloid(a=a, b=b)
+curve_obj = curves.Hypotrochoid(a=a, b=b, c=c)
+interval = curve_obj.get_interval(start=start, end=end, n_points=n_points)
 
 save_path = os.path.join(PROJECT_ROOT, 'data', 'images')
 os.makedirs(save_path, exist_ok=True)
-save_path = os.path.join(save_path, 'ConchoidGeometricFlow.png')
-title = "Conchoid: Mean Curvature Flow & Arc Length vs. Time"
-plot_geometric_flow(curve_obj=curve_obj, intervals=intervals, title=title,
+save_path = os.path.join(save_path, 'HypotrochoidGeometricFlow.png')
+title = "Hypotrochoid: Evolution Curve, Mean Curvature Flow & Arc Length vs. Time"
+plot_geometric_flow(curve_obj=curve_obj, interval=interval, title=title,
                     save_path=save_path)

@@ -1,7 +1,6 @@
 import matplotlib
 matplotlib.use('TkAgg')
 
-from typing import Sequence
 from src.geometry.curves import Curve
 
 import numpy as np
@@ -75,7 +74,7 @@ def sweep_curve(curve_obj: Curve, interval: np.ndarray, params: [dict, ...] = ()
     plt.show()
 
 
-def plot_geometric_flow(curve_obj: Curve, intervals: Sequence[np.ndarray],
+def plot_geometric_flow(curve_obj: Curve, interval: np.ndarray,
                         title: str = '', save_path: str = None):
     """
 
@@ -87,30 +86,32 @@ def plot_geometric_flow(curve_obj: Curve, intervals: Sequence[np.ndarray],
     """
 
     # Get the flow & arclengths to be plotted
-    curvature_flow = np.array(
-        [curve_obj.curvature(interval) for interval in intervals]
-    )
+    x_axis = curve_obj.x_parametrization(interval)
+    curvature_flow = curve_obj.curvature(interval)
     arc_lengths = np.array(
-        [curve_obj.arc_length(interval) for interval in intervals]
+        [curve_obj.arc_length(interval[i:]) for i in range(2, len(interval))]
     )
+    evolution_curve = curve_obj.generate_evolution_curve(interval)
 
     # Plot
-    fig, axes = plt.subplots(nrows=2, sharex='col', figsize=[11, 11])
+    fig, axes = plt.subplots(nrows=3, figsize=[11, 11])
+
+    # Plot evolution curve
+    axes[0].scatter(x_axis[2:], evolution_curve, cmap='hot_r', c=interval[2:])
+    axes[0].set_ylabel("Y (t)")
 
     # Plot flow
-    normalized_intervals = [
-        ((interval[2:] - np.min(interval[2:])) / np.max(interval[2:]))
-        for interval in intervals
-    ]
-    [axes[0].plot(interval, curvature_flow[i])
-     for i, interval in enumerate(normalized_intervals)]
-    axes[0].set_ylabel("Mean Curvature Flows (t)")
+    axes[1].scatter(x_axis[2:], curvature_flow, cmap='hot_r', c=interval[2:])
+    axes[1].set_xlabel("X (t)")
+    axes[1].set_ylabel("Mean Curvature Flow (t)")
 
     # Plot arc-lengths
-    axes[1].plot(arc_lengths)
-    axes[1].set_xlabel("Time")
-    axes[1].set_ylabel("Arc Length (t)")
+    scatter = axes[2].scatter(interval[2:], arc_lengths, cmap='hot_r', c=interval[2:])
+    axes[2].set_xlabel("Time")
+    axes[2].set_ylabel("Arc Length (t)")
 
+    cb = fig.colorbar(scatter, ax=axes)
+    cb.set_label('Time', labelpad=-40, y=1.05, rotation=0)
     fig.suptitle(title)
     plt.show()
 

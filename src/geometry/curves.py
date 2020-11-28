@@ -259,6 +259,25 @@ class Curve(ABC):
 
         return np.expand_dims(curvature_, 1) * normal
 
+    def generate_evolution_curve(self, t: np.ndarray) -> np.ndarray:
+        """
+
+        :param t:
+        :return:
+        """
+
+        # Compute dt
+        dt = np.diff(t)[1:]
+
+        # Compute the curvature
+        curvature = self.curvature(t)
+
+        # Compute the evolution curve through descent iterations
+        y = self.y_parametrization(t)
+        evolution_curve = y[2:] - (dt * curvature)
+
+        return evolution_curve
+
 
 class Astroid(Curve):
     """
