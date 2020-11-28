@@ -117,3 +117,20 @@ class TestCurve:
         # Both computations must be identical
         comp_diff = np.sum(np.abs(c_curvature - xy_curvature))
         assert comp_diff == pytest.approx(0, abs=1e-8)
+
+    def test_tangent_prime(self, sin_curve):
+        curve, interval = sin_curve
+        tangent_prime = curve.tangent_prime(interval)
+
+        # Assert shape
+        assert tangent_prime.shape == ((len(interval) - 2), 2)
+
+        # tangent_prime should be orthogonal to the tangent
+        tangent = curve.tangent(interval)
+        tangent = tangent[1:, :]
+        inner_product = np.mean(np.abs(np.matmul(tangent.T, tangent_prime)))
+
+        assert inner_product == pytest.approx(0, abs=1e-4)
+
+
+

@@ -19,7 +19,6 @@ class Curve(ABC):
         :param x_parametrization:
         :param y_parametrization:
         :param curvature_computation_method:
-        :param grad_correction_window:
         """
 
         assert curvature_computation_method in ('xy', 'c_prime_sq')
@@ -74,7 +73,8 @@ class Curve(ABC):
 
         return x, y
 
-    def _replace_infs(self, t: np.ndarray, signal: np.ndarray, grad: np.ndarray,
+    @staticmethod
+    def _replace_infs(t: np.ndarray, signal: np.ndarray, grad: np.ndarray,
                       grad_sq: np.ndarray = None) -> np.ndarray:
         """
 
@@ -254,9 +254,10 @@ class Curve(ABC):
         """
 
         normal = self.normal(t)
+        normal = normal[1:]
         curvature_ = self.curvature(t)
 
-        return curvature_ * normal
+        return np.expand_dims(curvature_, 1) * normal
 
 
 class Astroid(Curve):
