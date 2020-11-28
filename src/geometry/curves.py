@@ -19,8 +19,7 @@ class Curve(ABC):
         :param x_parametrization:
         :param y_parametrization:
         :param curvature_computation_method:
-        :param grad_max:
-        :param grad_window_size:
+        :param grad_correction_window:
         """
 
         assert curvature_computation_method in ('xy', 'c_prime_sq')
@@ -75,6 +74,57 @@ class Curve(ABC):
 
         return x, y
 
+    def _replace_infs(self, t: np.ndarray, signal: np.ndarray, grad: np.ndarray,
+                      grad_sq: np.ndarray = None) -> np.ndarray:
+        """
+
+        :param t:
+        :param signal:
+        :param grad:
+        :param grad_sq:
+        :return:
+        """
+
+        grad_inf_inds = np.where(np.isinf(grad))[0]
+        grad_sq_inf_inds = np.where(np.isinf(grad_sq))[0] if grad_sq is not None \
+            else []
+
+        # If no infs are present we can return the original signal
+        if len(grad_inf_inds) == 0 and len(grad_sq_inf_inds) == 0:
+            return grad[1:] if grad_sq is None else grad_sq[2:]
+
+        # If the infs are in the first ind we can safely delete them
+        if len(grad_inf_inds) and grad_inf_inds[0] == 0:
+            grad_inf_inds = grad_inf_inds[1:]
+
+        if len(grad_sq_inf_inds) and grad_sq_inf_inds[0] == 0:
+            grad_sq_inf_inds = grad_sq_inf_inds[1:]
+
+        # Correct indices
+        if len(grad_inf_inds):
+            grad_inf_inds -= 1
+
+        if len(grad_sq_inf_inds):
+            grad_sq_inf_inds -= 2
+
+        # Compute dt
+        dt = np.diff(t)
+
+        # Start by fixing grads - correct every inf using empirical differentiation
+        diff_signal = np.diff(signal)
+        grad = grad[1:]
+        grad[grad_inf_inds] = diff_signal[grad_inf_inds] / dt[grad_inf_inds]
+
+        # Now we can fix grad_sq if relevant or just return the corrected grads
+        if grad_sq is None:
+            return grad
+
+        diff_grad = np.diff(grad)
+        grad_sq = grad_sq[2:]
+        grad_sq[grad_sq_inf_inds] = diff_grad[grad_sq_inf_inds]
+
+        return grad_sq
+
     def grad(self, t: np.ndarray) -> (np.ndarray, np.ndarray):
         """
 
@@ -84,6 +134,9 @@ class Curve(ABC):
 
         x_grad = egrad(self.x_parametrization)(t)
         y_grad = egrad(self.y_parametrization)(t)
+
+        x_grad = self._replace_infs(t=t, signal=self.x_parametrization(t), grad=x_grad)
+        y_grad = self._replace_infs(t=t, signal=self.y_parametrization(t), grad=y_grad)
 
         return x_grad, y_grad
 
@@ -96,6 +149,13 @@ class Curve(ABC):
 
         x_grad = egrad(egrad(self.x_parametrization))(t)
         y_grad = egrad(egrad(self.y_parametrization))(t)
+
+        x_grad = self._replace_infs(t=t, signal=self.x_parametrization(t),
+                                    grad=egrad(self.x_parametrization)(t),
+                                    grad_sq=x_grad)
+        y_grad = self._replace_infs(t=t, signal=self.x_parametrization(t),
+                                    grad=egrad(self.y_parametrization)(t),
+                                    grad_sq=y_grad)
 
         return x_grad, y_grad
 
@@ -124,30 +184,6 @@ class Curve(ABC):
 
         return tangent
 
-    @staticmethod
-    def _replace_infs(inf_inds: np.ndarray, signal: np.ndarray) -> np.ndarray:
-        """
-
-        :param inf_inds:
-        :param signal:
-        :return:
-        """
-
-        # If the first element is inf we can safely remove it
-        if inf_inds[0] == 0:
-            inf_inds = inf_inds[1:]
-
-        # Correct indices to account for the diff operator
-        inf_inds = inf_inds - 1
-        diff = np.diff(signal)
-
-        values = diff[inf_inds]
-
-        # Correct the indices back
-        inf_inds += 1
-
-        return inf_inds, values
-
     def arc_length(self, t: np.ndarray) -> float:
         """
 
@@ -157,22 +193,9 @@ class Curve(ABC):
 
         dt = np.diff(t)
         grad_x, grad_y = self.grad(t)
-        grad_x[1:] = grad_x[1:] * dt
-        grad_y[1:] = grad_y[1:] * dt
-
-        # Handle cases where the gradients are infinite by performing
-        # empirical differentiation
-        infs_x = np.where(np.isinf(grad_x))[0]
-        if len(infs_x):
-            inf_inds, values = self._replace_infs(infs_x, self.x_parametrization(t))
-            grad_x[inf_inds] = values
-
-        infs_y = np.where(np.isinf(grad_y))[0]
-        if len(infs_y):
-            inf_inds, values = self._replace_infs(infs_y, self.y_parametrization(t))
-            grad_y[inf_inds] = values
-
-        integrand = np.hypot(grad_x, grad_y)[1:]
+        grad_x *= dt
+        grad_y *= dt
+        integrand = np.hypot(grad_x, grad_y)
         arc_length = np.sum(integrand)
 
         return arc_length
