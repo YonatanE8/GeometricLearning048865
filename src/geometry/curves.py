@@ -413,12 +413,17 @@ class DescartesFolium(Curve):
 
         def x_param(t: np.ndarray):
             singularity = np.where(t == -1.)[0]
-            t[singularity] = -1 + eps
+            if len(singularity):
+                t[singularity] = -1 + eps
+
             return (3 * a * t) / (1 + np.power(t, 3))
 
         def y_param(t: np.ndarray):
             singularity = np.where(t == -1.)[0]
-            t[singularity] = -1 + eps
+
+            if len(singularity):
+                t[singularity] = -1 + eps
+
             return (3 * a * np.power(t, 2)) / (1 + np.power(t, 3))
 
         super(DescartesFolium, self).__init__(x_parametrization=x_param,
