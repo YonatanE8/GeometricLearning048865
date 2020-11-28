@@ -79,7 +79,7 @@ def plot_geometric_flow(curve_obj: Curve, interval: np.ndarray,
     """
 
     :param curve_obj:
-    :param intervals:
+    :param interval:
     :param title:
     :param save_path:
     :return:
@@ -91,7 +91,7 @@ def plot_geometric_flow(curve_obj: Curve, interval: np.ndarray,
     arc_lengths = np.array(
         [curve_obj.arc_length(interval[i:]) for i in range(2, len(interval))]
     )
-    evolution_curve = curve_obj.generate_evolution_curve(interval)
+    evolution_curve = curve_obj.generate_evolution_curves(interval)
 
     # Plot
     fig, axes = plt.subplots(nrows=3, figsize=[11, 11])
@@ -101,8 +101,8 @@ def plot_geometric_flow(curve_obj: Curve, interval: np.ndarray,
     axes[0].set_ylabel("Y (t)")
 
     # Plot flow
-    axes[1].scatter(x_axis[2:], curvature_flow, cmap='hot_r', c=interval[2:])
-    axes[1].set_xlabel("X (t)")
+    axes[1].scatter(interval[2:], curvature_flow, cmap='hot_r', c=interval[2:])
+    axes[1].set_xlabel("Time")
     axes[1].set_ylabel("Mean Curvature Flow (t)")
 
     # Plot arc-lengths

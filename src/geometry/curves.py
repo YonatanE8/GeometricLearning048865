@@ -1,6 +1,5 @@
 from abc import ABC
-from typing import Callable
-from scipy.integrate import quad
+from typing import Callable, Sequence
 from autograd import elementwise_grad as egrad
 
 import autograd.numpy as np
@@ -259,7 +258,7 @@ class Curve(ABC):
 
         return np.expand_dims(curvature_, 1) * normal
 
-    def generate_evolution_curve(self, t: np.ndarray) -> np.ndarray:
+    def generate_evolution_curves(self, t: np.ndarray) -> Sequence[np.ndarray]:
         """
 
         :param t:
@@ -267,16 +266,16 @@ class Curve(ABC):
         """
 
         # Compute dt
-        dt = np.diff(t)[1:]
+        dt = np.diff(t)[0]
 
         # Compute the curvature
         curvature = self.curvature(t)
 
         # Compute the evolution curve through descent iterations
         y = self.y_parametrization(t)
-        evolution_curve = y[2:] - (dt * curvature)
+        evolution_curves = y[2:] - dt * curvature
 
-        return evolution_curve
+        return evolution_curves
 
 
 class Astroid(Curve):
@@ -590,3 +589,25 @@ class HalfCircle(Curve):
 
         super(HalfCircle, self).__init__(x_parametrization=x_param,
                                          y_parametrization=y_param)
+
+
+class Ellipse(Curve):
+    """
+
+    """
+
+    def __init__(self, a: float = 1., b: float = 2.):
+        """
+
+        :param a:
+        :param b:
+        """
+
+        def x_param(t: np.ndarray):
+            return a * np.cos(t)
+
+        def y_param(t: np.ndarray):
+            return b * np.sin(t)
+
+        super(Ellipse, self).__init__(x_parametrization=x_param,
+                                      y_parametrization=y_param)
