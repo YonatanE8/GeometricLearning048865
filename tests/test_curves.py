@@ -60,7 +60,7 @@ class TestCurve:
 
         # Tangent norm should always be 1
         assert np.sum(np.linalg.norm(tangent) - np.ones_like(tangent)) == \
-               pytest.approx(0, 1e-8)
+               pytest.approx(0, abs=1e-8)
 
     def test_arclength(self, half_circle_curve, sin_curve):
         curve, interval = half_circle_curve
@@ -75,6 +75,13 @@ class TestCurve:
 
         assert (np.abs(arc_len - approximate_sol)) == pytest.approx(0, abs=3e-2)
 
+    def test_normal(self, sin_curve):
+        curve, interval = sin_curve
+        normal = curve.normal(interval)
+
+        # Normals norm should always be 1
+        assert np.sum(np.linalg.norm(normal) - np.ones_like(normal)) == \
+               pytest.approx(0, abs=1e-8)
 
 
 
