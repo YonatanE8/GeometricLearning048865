@@ -258,10 +258,12 @@ class Curve(ABC):
 
         return np.expand_dims(curvature_, 1) * normal
 
-    def generate_evolution_curves(self, t: np.ndarray) -> Sequence[np.ndarray]:
+    def generate_evolution_curves(self, t: np.ndarray,
+                                  n_curves: int = 10) -> Sequence[np.ndarray]:
         """
 
         :param t:
+        :param n_curves:
         :return:
         """
 
@@ -273,7 +275,7 @@ class Curve(ABC):
 
         # Compute the evolution curve through descent iterations
         y = self.y_parametrization(t)
-        evolution_curves = y[2:] - dt * curvature
+        evolution_curves = y[2:] - (dt * curvature)
 
         return evolution_curves
 

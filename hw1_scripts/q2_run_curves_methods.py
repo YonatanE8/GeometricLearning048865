@@ -63,7 +63,7 @@ params = [
 #     title="Cusp", save_path=save_path)
 
 start = 0
-end = 100
+end = 1000
 n_points = 1000
 a = 2
 b = 4
@@ -74,11 +74,11 @@ c = 2
 # curve_obj = curves.DescartesFolium(a=a)
 # curve_obj = curves.InvoluteCircle(a=a)
 # curve_obj = curves.Epicycloid(a=a, b=b)
-# curve_obj = curves.Ellipse(a=a, b=b)
-curve_obj = curves.Hypotrochoid(a=a, b=b, c=c)
+curve_obj = curves.Ellipse(a=a, b=b)
+# curve_obj = curves.Hypotrochoid(a=a, b=b, c=c)
 interval = curve_obj.get_interval(start=start, end=end, n_points=n_points)
 
-save_path = os.path.join(data_dir, 'HypotrochoidGeometricFlow.png')
-title = "Hypotrochoid: Evolution Curve, Mean Curvature Flow & Arc Length vs. Time"
+save_path = os.path.join(data_dir, 'EllipseGeometricFlow.png')
+title = "Ellipse: Evolution Curve, Mean Curvature Flow & Arc Length vs. Time"
 plot_geometric_flow(curve_obj=curve_obj, interval=interval, title=title,
                     save_path=save_path)
