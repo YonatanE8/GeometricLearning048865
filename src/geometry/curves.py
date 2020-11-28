@@ -210,9 +210,10 @@ class Curve(ABC):
         tangent = self.tangent(t)
 
         # For the 2D case we can always use this
-        normal = np.array(
-            [-tangent[:, 1], tangent[:, 0]]
-        )
+        normal = np.concatenate([
+            np.expand_dims(-tangent[:, 1], 1),
+            np.expand_dims(tangent[:, 0], 1)
+            ], 1)
 
         return normal
 
@@ -225,6 +226,7 @@ class Curve(ABC):
 
         if self.curvature_computation_method == 'xy':
             grad_x, grad_y = self.grad(t)
+            grad_x, grad_y = grad_x[1:], grad_y[1:]
             grad_sq_x, grad_sq_y = self.grad_sq(t)
 
             nominator = grad_x * grad_sq_y - grad_y * grad_sq_x
@@ -234,12 +236,13 @@ class Curve(ABC):
 
         elif self.curvature_computation_method == 'c_prime_sq':
             normal = self.normal(t)
+            normal = normal[1:]
             grad_sq_x, grad_sq_y = self.grad_sq(t)
             grads_sq = np.concatenate(
                 [np.expand_dims(grad_sq_x, 1), np.expand_dims(grad_sq_y, 1)], 1
             )
 
-            curveature_ = np.matmul(normal, grads_sq)
+            curveature_ = normal @ grads_sq.T
 
         return curveature_
 

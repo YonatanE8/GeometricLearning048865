@@ -30,6 +30,10 @@ class TestCurve:
         t = np.linspace(start=0, stop=(2 * np.pi), num=100)
         sin = np.sin(t)
 
+        # Assert shape
+        assert len(x) == len(y)
+        assert len(x) == len(t)
+
         assert np.sum(np.abs(x - t)) == pytest.approx(0, 1e-4)
         assert np.sum(np.abs(y - sin)) == pytest.approx(0, 1e-4)
 
@@ -39,6 +43,10 @@ class TestCurve:
 
         cos = np.cos(interval)[1:]
 
+        # Assert shape
+        assert len(x_grad) == len(y_grad)
+        assert len(x_grad) == len(cos)
+
         assert np.sum(np.abs(x_grad - np.ones_like(x_grad))) == pytest.approx(0, 1e-6)
         assert np.sum(np.abs(y_grad - cos)) == pytest.approx(0, 1e-6)
 
@@ -47,6 +55,10 @@ class TestCurve:
         x_grad, y_grad = curve.grad_sq(interval)
 
         sin = -np.sin(interval)[2:]
+
+        # Assert shape
+        assert len(x_grad) == len(y_grad)
+        assert len(x_grad) == len(sin)
 
         assert np.sum(np.abs(x_grad - np.zeros_like(x_grad))) == pytest.approx(0, 1e-6)
         assert np.sum(np.abs(y_grad - sin)) == pytest.approx(0, 1e-6)
@@ -58,6 +70,9 @@ class TestCurve:
         # Regular curve should not have any singularities
         assert len(np.where(np.sum(np.abs(tangent), 1) == 0)[0]) == 0
 
+        # Assert shape
+        assert tangent.shape == ((interval.shape[0] - 1), 2)
+
         # Tangent norm should always be 1
         assert np.sum(np.linalg.norm(tangent) - np.ones_like(tangent)) == \
                pytest.approx(0, abs=1e-8)
@@ -67,6 +82,7 @@ class TestCurve:
         arc_len = curve.arc_length(interval)
         analytic_arc_len = np.pi
 
+        assert isinstance(arc_len, float)
         assert (np.abs(arc_len - analytic_arc_len)) == pytest.approx(0, abs=3e-2)
 
         curve, interval = sin_curve
@@ -79,11 +95,25 @@ class TestCurve:
         curve, interval = sin_curve
         normal = curve.normal(interval)
 
+        # Assert shape
+        assert normal.shape == ((interval.shape[0] - 1), 2)
+
         # Normals norm should always be 1
         assert np.sum(np.linalg.norm(normal) - np.ones_like(normal)) == \
                pytest.approx(0, abs=1e-8)
 
+    def test_curvature(self, sin_curve):
+        curve, interval = sin_curve
 
+        # Compute the curvature using the 'xy' method
+        xy_curvature = curve.curvature(interval)
 
+        # Compute the curvature using the 'c_prime_sq' method
+        c_curvature = curve.curvature(interval)
 
+        # Assert shape
+        assert xy_curvature.shape == (len(interval) - 2, )
 
+        # Both computations must be identical
+        comp_diff = np.sum(np.abs(c_curvature - xy_curvature))
+        assert comp_diff == pytest.approx(0, abs=1e-8)
