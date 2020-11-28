@@ -124,6 +124,30 @@ class Curve(ABC):
 
         return tangent
 
+    @staticmethod
+    def _replace_infs(inf_inds: np.ndarray, signal: np.ndarray) -> np.ndarray:
+        """
+
+        :param inf_inds:
+        :param signal:
+        :return:
+        """
+
+        # If the first element is inf we can safely remove it
+        if inf_inds[0] == 0:
+            inf_inds = inf_inds[1:]
+
+        # Correct indices to account for the diff operator
+        inf_inds = inf_inds - 1
+        diff = np.diff(signal)
+
+        values = diff[inf_inds]
+
+        # Correct the indices back
+        inf_inds += 1
+
+        return inf_inds, values
+
     def arc_length(self, t: np.ndarray) -> float:
         """
 
@@ -131,21 +155,27 @@ class Curve(ABC):
         :return:
         """
 
-        # grad_x, grad_y = self.grad(t)
-        # integrand = np.hypot(grad_x, grad_y)
-        # arc_length = np.sum(integrand)
-        #
-        # return arc_length
+        dt = np.diff(t)
+        grad_x, grad_y = self.grad(t)
+        grad_x[1:] = grad_x[1:] * dt
+        grad_y[1:] = grad_y[1:] * dt
 
-        def integrand(val: float) -> np.ndarray:
-            grad_x, grad_y = self.grad(np.array([val, ]))
-            c_prime = np.hypot(grad_x, grad_y)
+        # Handle cases where the gradients are infinite by performing
+        # empirical differentiation
+        infs_x = np.where(np.isinf(grad_x))[0]
+        if len(infs_x):
+            inf_inds, values = self._replace_infs(infs_x, self.x_parametrization(t))
+            grad_x[inf_inds] = values
 
-            return c_prime
+        infs_y = np.where(np.isinf(grad_y))[0]
+        if len(infs_y):
+            inf_inds, values = self._replace_infs(infs_y, self.y_parametrization(t))
+            grad_y[inf_inds] = values
 
-        arc_length = quad(func=integrand, a=t[0], b=t[1])
+        integrand = np.hypot(grad_x, grad_y)[1:]
+        arc_length = np.sum(integrand)
 
-        return arc_length[0]
+        return arc_length
 
     def normal(self, t: np.ndarray) -> np.ndarray:
         """
@@ -505,7 +535,7 @@ class HalfCircle(Curve):
             return t
 
         def y_param(t: np.ndarray):
-            return 1 - np.power(t, 2)
+            return np.sqrt((1 - np.power(t, 2)))
 
         super(HalfCircle, self).__init__(x_parametrization=x_param,
                                          y_parametrization=y_param)
