@@ -190,7 +190,7 @@ class Curve(ABC):
 
         # Compute s(t)
         s = np.array([
-            self.arc_length(t[:i]) for i in range(2, len(t))
+            self.arc_length(t[i:]) for i in range(2, len(t))
         ])
 
         # Compute C'(s(t)) == T(t) & dt
@@ -349,6 +349,7 @@ class Curve(ABC):
         curvature = self.curvature_t(t)
 
         # Compute the evolution curve through descent iterations
+        # s, c_s = self.parametrize_by_arclength(t)
         y = self.y_parametrization(t)
         evolution_curves = y[2:] - (dt * curvature)
 
