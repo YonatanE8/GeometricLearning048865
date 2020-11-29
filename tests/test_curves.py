@@ -74,8 +74,9 @@ class TestCurve:
         assert tangent.shape == ((interval.shape[0] - 1), 2)
 
         # Tangent norm should always be 1
-        assert np.sum(np.linalg.norm(tangent) - np.ones_like(tangent)) == \
-               pytest.approx(0, abs=1e-8)
+        assert np.sum(np.linalg.norm(tangent, axis=1) -
+                      np.ones((tangent.shape[0], ))) == \
+            pytest.approx(0, abs=1e-8)
 
     def test_arclength(self, half_circle_curve, sin_curve):
         curve, interval = half_circle_curve
@@ -94,13 +95,20 @@ class TestCurve:
     def test_normal(self, sin_curve):
         curve, interval = sin_curve
         normal = curve.normal(interval)
+        x = curve.x_parametrization(interval)[1:]
+        y = curve.y_parametrization(interval)[1:]
+        xy = np.concatenate((np.expand_dims(x, 1), np.expand_dims(y, 1)), 1)
 
         # Assert shape
         assert normal.shape == ((interval.shape[0] - 1), 2)
 
         # Normals norm should always be 1
-        assert np.sum(np.linalg.norm(normal) - np.ones_like(normal)) == \
-               pytest.approx(0, abs=1e-8)
+        assert np.sum(np.linalg.norm(normal, axis=1) -
+                      np.ones((normal.shape[0], ))) == \
+            pytest.approx(0, abs=1e-8)
+
+        # Normals should be orthogonal to the original vectors
+        assert np.sum(np.matmul(xy, normal.T)) == pytest.approx(0, abs=1e-8)
 
     def test_curvature(self, sin_curve):
         curve, interval = sin_curve
@@ -128,9 +136,6 @@ class TestCurve:
         # tangent_prime should be orthogonal to the tangent
         tangent = curve.tangent(interval)
         tangent = tangent[1:, :]
-        inner_product = np.mean(np.abs(np.matmul(tangent.T, tangent_prime)))
+        inner_product = np.sum(np.matmul(tangent.T, tangent_prime))
 
         assert inner_product == pytest.approx(0, abs=1e-4)
-
-
-

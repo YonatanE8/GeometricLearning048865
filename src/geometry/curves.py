@@ -158,6 +158,27 @@ class Curve(ABC):
 
         return x_grad, y_grad
 
+    def arc_length(self, t: np.ndarray) -> float:
+        """
+
+        :param t:
+        :return:
+        """
+
+        # Compute dt
+        dt = np.diff(t)
+
+        # Compute ||C'(t)||
+        grad_x, grad_y = self.grad(t)
+        grad_x *= dt
+        grad_y *= dt
+        integrand = np.hypot(grad_x, grad_y)
+
+        # Compute s(t)
+        arc_length = np.sum(integrand)
+
+        return arc_length
+
     def tangent(self, t: np.ndarray) -> np.ndarray:
         """
 
@@ -177,27 +198,12 @@ class Curve(ABC):
             c_prime[zero_inds] = np.ones((len(zero_inds), )) * 1e-6
 
         # Compute the norm
-        c_prime_norm = np.linalg.norm(c_prime)
+        c_prime_norm = np.linalg.norm(c_prime, axis=1)
 
-        tangent = c_prime / c_prime_norm
+        # Compute C'(s(t)) = T(t)
+        tangent = c_prime / np.expand_dims(c_prime_norm, 1)
 
         return tangent
-
-    def arc_length(self, t: np.ndarray) -> float:
-        """
-
-        :param t:
-        :return:
-        """
-
-        dt = np.diff(t)
-        grad_x, grad_y = self.grad(t)
-        grad_x *= dt
-        grad_y *= dt
-        integrand = np.hypot(grad_x, grad_y)
-        arc_length = np.sum(integrand)
-
-        return arc_length
 
     def normal(self, t: np.ndarray) -> np.ndarray:
         """
@@ -258,8 +264,7 @@ class Curve(ABC):
 
         return np.expand_dims(curvature_, 1) * normal
 
-    def generate_evolution_curves(self, t: np.ndarray,
-                                  n_curves: int = 10) -> Sequence[np.ndarray]:
+    def generate_evolution_curves(self, t: np.ndarray) -> np.ndarray:
         """
 
         :param t:
