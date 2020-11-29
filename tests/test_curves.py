@@ -50,7 +50,6 @@ class TestCurve:
     def test_grad(self, sin_curve):
         curve, interval = sin_curve
         x_grad, y_grad = curve.grad(interval)
-
         cos = np.cos(interval)[1:]
 
         # Assert shape
@@ -63,7 +62,6 @@ class TestCurve:
     def test_grad_sq(self, sin_curve):
         curve, interval = sin_curve
         x_grad, y_grad = curve.grad_sq(interval)
-
         sin = -np.sin(interval)[2:]
 
         # Assert shape
@@ -91,9 +89,6 @@ class TestCurve:
         curve, interval = sin_curve
         tangent = curve.unit_tangent_t(interval)
         normal = curve.unit_normal_t(interval)
-        # x = curve.x_parametrization(interval)
-        # y = curve.y_parametrization(interval)
-        # xy = np.concatenate((np.expand_dims(x, 1), np.expand_dims(y, 1)), 1)
 
         # Regular curve should not have any singularities
         assert len(np.where(np.sum(np.abs(tangent), 1) == 0)[0]) == 0
@@ -118,7 +113,6 @@ class TestCurve:
         normal = curve.unit_normal_t(interval)
         x = curve.x_parametrization(interval)
         y = curve.y_parametrization(interval)
-        xy = np.concatenate((np.expand_dims(x, 1), np.expand_dims(y, 1)), 1)
 
         # Assert shape
         assert normal.shape == ((interval.shape[0] - 1), 2)

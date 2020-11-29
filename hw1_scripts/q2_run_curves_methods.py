@@ -81,10 +81,8 @@ interval = curve_obj.get_interval(start=start, end=end, n_points=n_points)
 
 save_path = os.path.join(data_dir, 'EllipseGeometricFlow.png')
 title = "Ellipse: Evolution Curve, Mean Curvature Flow & Arc Length vs. Time"
-# plot_geometric_flow(curve_obj=curve_obj, interval=interval, title=title,
-#                     save_path=save_path)
-
-plot_curves_normals_vs_tangent(curve_obj=curve_obj, interval=interval)
+plot_geometric_flow(curve_obj=curve_obj, interval=interval, title=title,
+                    save_path=save_path)
 
 
 
