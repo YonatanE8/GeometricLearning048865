@@ -190,11 +190,11 @@ class Curve(ABC):
 
         # Compute s(t)
         s = np.array([
-            self.arc_length(t[:i] for i in range(1, len(t)))
+            self.arc_length(t[:i]) for i in range(2, len(t))
         ])
 
         # Compute C'(s(t)) == T(t) & dt
-        dt = np.diff(t)
+        dt = np.expand_dims(np.diff(t), 1)
         c_prime = self.unit_tangent_t(t)
 
         # Compute C(s), remember that ds\dt = ||C'(t)||

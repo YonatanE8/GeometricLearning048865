@@ -64,8 +64,8 @@ params = [
 #     title="Cusp", save_path=save_path)
 
 start = 0
-end = 100
-n_points = 100
+end = 1000
+n_points = 1000
 a = 2
 b = 4
 c = 2
