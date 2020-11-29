@@ -121,3 +121,45 @@ def plot_geometric_flow(curve_obj: Curve, interval: np.ndarray,
 
         fig.savefig(save_path, dpi=300, orientation='landscape', format='png')
 
+
+def plot_curves_normals_vs_tangent(curve_obj: Curve, interval: np.ndarray,
+                                   title: str = '', save_path: str = None):
+    """
+
+    :param curve_obj:
+    :param interval:
+    :param title:
+    :param save_path:
+    :return:
+    """
+
+    fig, axes = plt.subplots(ncols=2, figsize=[11, 11])
+
+    x = curve_obj.x_parametrization(interval)
+    y = curve_obj.y_parametrization(interval)
+    tangent = curve_obj.unit_tangent_t(interval)
+    normal = curve_obj.unit_normal_t(interval)
+
+    for i in range(len(tangent)):
+        axes[0].plot(x, y, 'k')
+        axes[0].arrow(x=x[i + 1], y=y[i + 1],
+                      dx=(x[i + 1] + tangent[i, 0]), dy=(y[i + 1] + tangent[i, 1]),
+                      color='r')
+        axes[0].set_title("Tangent")
+
+    for i in range(len(normal)):
+        axes[1].plot(x, y, 'k')
+        axes[1].arrow(x=x[i + 1], y=y[i + 1],
+                      dx=(x[i + 1] + normal[i, 0]), dy=(y[i + 1] + normal[i, 1]),
+                      color='b')
+        axes[1].set_title("Normal")
+
+    fig.suptitle(title)
+
+    if save_path is not None:
+        if not save_path.endswith('.png'):
+            save_path = save_path + '.png'
+
+        fig.savefig(save_path, dpi=300, orientation='landscape', format='png')
+
+    plt.show()
