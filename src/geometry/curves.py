@@ -240,7 +240,7 @@ class Curve(ABC):
         # Get T(t) the unit tangent vector
         tangent = self.unit_tangent_t(t)
 
-        # # For the 2D case we can always use this
+        # For the 2D case we can always use this: (x, y) -> (-y, x)
         normal = np.concatenate([
             np.expand_dims(-tangent[:, 1], 1),
             np.expand_dims(tangent[:, 0], 1)
@@ -294,10 +294,10 @@ class Curve(ABC):
         grad_x, grad_y = grad_x[1:], grad_y[1:]
         grad_sq_x, grad_sq_y = self.grad_sq(t)
 
-        nominator = grad_x * grad_sq_y - grad_y * grad_sq_x
+        numerator = grad_x * grad_sq_y - grad_y * grad_sq_x
         denominator = np.power((np.power(grad_x, 2) + np.power(grad_y, 2)), 1.5)
 
-        curveature_ = nominator / denominator
+        curveature_ = numerator / denominator
 
         return curveature_
 
@@ -309,7 +309,7 @@ class Curve(ABC):
         """
 
         # Get N(s)
-        n_s = self.unit_normal_s(t)
+        n_s = self.unit_normal_s(t)[1:, :]
 
         # Estimate C''(s), while remembering that C'(s) == T(t)
         c_prime_s = self.unit_tangent_t(t)
@@ -342,18 +342,32 @@ class Curve(ABC):
         :return:
         """
 
+        # # Compute dt
+        # dt = np.diff(t)[0]
+        #
+        # # Compute the curvature
+        # curvature = self.curvature_s(t)
+        #
+        # # Compute the evolution curve through descent iterations
+        # # s, c_s = self.parametrize_by_arclength(t)
+        # y = self.y_parametrization(t)
+        # evolution_curves = y[2:] - (dt * curvature)
         # Compute dt
         dt = np.diff(t)[0]
 
         # Compute the curvature
-        curvature = self.curvature_t(t)
+        curvatures = self.curvature_t(t)
+        normal = self.unit_normal_t(t)[1:]
 
-        # Compute the evolution curve through descent iterations
-        # s, c_s = self.parametrize_by_arclength(t)
-        y = self.y_parametrization(t)
-        evolution_curves = y[2:] - (dt * curvature)
+        # Iterate over time
+        curvature_flow = [(curvatures[0] * normal[1]), ]
+        for i in range(1, len(t) - 2):
+            c_t = -dt * curvatures[i] * normal[i]
+            curvature_flow.append(c_t)
 
-        return evolution_curves
+        evolution_curve = np.array(curvature_flow)
+
+        return evolution_curve
 
 
 class Astroid(Curve):

@@ -98,7 +98,10 @@ def plot_geometric_flow(curve_obj: Curve, interval: np.ndarray,
     fig, axes = plt.subplots(nrows=3, figsize=[11, 11])
 
     # Plot evolution curve
-    axes[0].scatter(x_axis[2:], evolution_curve, cmap='hot_r', c=interval[2:])
+    # axes[0].scatter(x_axis[2:], evolution_curve, cmap='hot_r', c=interval[2:])
+    axes[0].scatter(evolution_curve[:, 0], evolution_curve[:, 1],
+                    cmap='hot_r', c=interval[2:])
+    # axes[0].plot(evolution_curve[:, 0], evolution_curve[:, 1])
     axes[0].set_ylabel("Y (t)")
 
     # Plot flow
