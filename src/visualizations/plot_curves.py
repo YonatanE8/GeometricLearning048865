@@ -87,7 +87,7 @@ def plot_geometric_flow(curve_obj: Curve, interval: np.ndarray,
 
     # Get the flow & arclengths to be plotted
     x_axis = curve_obj.x_parametrization(interval)
-    curvature_flow = curve_obj.curvature(interval)
+    curvature_flow = curve_obj.curvature_t(interval)
     arc_lengths = np.array(
         [curve_obj.arc_length(interval[i:]) for i in range(2, len(interval))]
     )

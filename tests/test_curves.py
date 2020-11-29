@@ -63,21 +63,6 @@ class TestCurve:
         assert np.sum(np.abs(x_grad - np.zeros_like(x_grad))) == pytest.approx(0, 1e-6)
         assert np.sum(np.abs(y_grad - sin)) == pytest.approx(0, 1e-6)
 
-    def test_tangent(self, sin_curve):
-        curve, interval = sin_curve
-        tangent = curve.tangent(interval)
-
-        # Regular curve should not have any singularities
-        assert len(np.where(np.sum(np.abs(tangent), 1) == 0)[0]) == 0
-
-        # Assert shape
-        assert tangent.shape == ((interval.shape[0] - 1), 2)
-
-        # Tangent norm should always be 1
-        assert np.sum(np.linalg.norm(tangent, axis=1) -
-                      np.ones((tangent.shape[0], ))) == \
-            pytest.approx(0, abs=1e-8)
-
     def test_arclength(self, half_circle_curve, sin_curve):
         curve, interval = half_circle_curve
         arc_len = curve.arc_length(interval)
@@ -92,11 +77,26 @@ class TestCurve:
 
         assert (np.abs(arc_len - approximate_sol)) == pytest.approx(0, abs=3e-2)
 
+    def test_tangent(self, sin_curve):
+        curve, interval = sin_curve
+        tangent = curve.tangent_t(interval)
+
+        # Regular curve should not have any singularities
+        assert len(np.where(np.sum(np.abs(tangent), 1) == 0)[0]) == 0
+
+        # Assert shape
+        assert tangent.shape == ((interval.shape[0] - 1), 2)
+
+        # Tangent norm should always be 1
+        assert np.sum(np.linalg.norm(tangent, axis=1) -
+                      np.ones((tangent.shape[0], ))) == \
+            pytest.approx(0, abs=1e-8)
+
     def test_normal(self, sin_curve):
         curve, interval = sin_curve
-        normal = curve.normal(interval)
-        x = curve.x_parametrization(interval)[1:]
-        y = curve.y_parametrization(interval)[1:]
+        normal = curve.normal_t(interval)
+        x = curve.x_parametrization(interval)
+        y = curve.y_parametrization(interval)
         xy = np.concatenate((np.expand_dims(x, 1), np.expand_dims(y, 1)), 1)
 
         # Assert shape
@@ -108,16 +108,21 @@ class TestCurve:
             pytest.approx(0, abs=1e-8)
 
         # Normals should be orthogonal to the original vectors
-        assert np.sum(np.matmul(xy, normal.T)) == pytest.approx(0, abs=1e-8)
+        dot_product = np.sum([np.dot(xy[(i + 1), None, :], normal.T[:, i, None])
+                              for i in range(xy.shape[0] - 1)])
+
+        assert dot_product == pytest.approx(0, abs=1e-8)
+
+        # assert np.sum(np.matmul(xy, normal.T)) == pytest.approx(0, abs=1e-8)
 
     def test_curvature(self, sin_curve):
         curve, interval = sin_curve
 
         # Compute the curvature using the 'xy' method
-        xy_curvature = curve.curvature(interval)
+        xy_curvature = curve.curvature_t(interval)
 
         # Compute the curvature using the 'c_prime_sq' method
-        c_curvature = curve.curvature(interval)
+        c_curvature = curve.curvature_t(interval)
 
         # Assert shape
         assert xy_curvature.shape == (len(interval) - 2, )
@@ -134,8 +139,9 @@ class TestCurve:
         assert tangent_prime.shape == ((len(interval) - 2), 2)
 
         # tangent_prime should be orthogonal to the tangent
-        tangent = curve.tangent(interval)
+        tangent = curve.tangent_t(interval)
         tangent = tangent[1:, :]
-        inner_product = np.sum(np.matmul(tangent.T, tangent_prime))
+        inner_product = np.sum([np.dot(tangent[i, None, :], tangent_prime.T[:, i, None])
+                                for i in range(tangent.shape[0])])
 
         assert inner_product == pytest.approx(0, abs=1e-4)
