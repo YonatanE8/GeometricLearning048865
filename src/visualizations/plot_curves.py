@@ -74,40 +74,32 @@ def sweep_curve(curve_obj: Curve, interval: np.ndarray, params: [dict, ...] = ()
     plt.show()
 
 
-def plot_geometric_flow(curve_obj: Curve, interval: np.ndarray,
+def plot_geometric_flow(curve_obj: Curve, interval: np.ndarray, n_iters: int = 100,
                         title: str = '', save_path: str = None):
     """
 
     :param curve_obj:
     :param interval:
+    :param n_iters:
     :param title:
     :param save_path:
     :return:
     """
 
     # Get the flow & arclengths to be plotted
-    x_axis = curve_obj.x_parametrization(interval)
-    # s, cs = curve_obj.parametrize_by_arclength(interval)
     curvature_flow = curve_obj.curvature_t(interval)
-    arc_lengths = np.array(
-        [curve_obj.arc_length(interval[i:]) for i in range(2, len(interval))]
-    )
-    evolution_curve = curve_obj.generate_evolution_curves(interval)
+    evolution_curve, arc_lengths = curve_obj.generate_evolution_curves(
+        interval=interval,
+        n_iterations=n_iters)
 
     # Plot
-    fig, axes = plt.subplots(nrows=3, figsize=[11, 11])
+    fig, axes = plt.subplots(nrows=2, figsize=[11, 11])
 
     # Plot evolution curve
     # axes[0].scatter(x_axis[2:], evolution_curve, cmap='hot_r', c=interval[2:])
-    axes[0].scatter(evolution_curve[:, 0], evolution_curve[:, 1],
-                    cmap='hot_r', c=interval[2:])
-    # axes[0].plot(evolution_curve[:, 0], evolution_curve[:, 1])
+    [axes[0].scatter(curve[0], evolution_curve[1],
+                     cmap='hot_r', c=interval[2:]) for curve in evolution_curve]
     axes[0].set_ylabel("Y (t)")
-
-    # Plot flow
-    axes[1].scatter(interval[2:], curvature_flow, cmap='hot_r', c=interval[2:])
-    axes[1].set_xlabel("Time")
-    axes[1].set_ylabel("Curvature(t)")
 
     # Plot arc-lengths
     scatter = axes[2].scatter(interval[2:], arc_lengths, cmap='hot_r', c=interval[2:])

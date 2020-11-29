@@ -1,6 +1,7 @@
 from abc import ABC
 from typing import Callable, Sequence
 from autograd import elementwise_grad as egrad
+from numpy import gradient as np_grad
 
 import autograd.numpy as np
 
@@ -283,7 +284,7 @@ class Curve(ABC):
 
         return normal
 
-    def curvature_t(self, t: np.ndarray) -> np.ndarray:
+    def curvature_t(self, t: np.ndarray) -> float:
         """
 
         :param t:
@@ -294,8 +295,30 @@ class Curve(ABC):
         grad_x, grad_y = grad_x[1:], grad_y[1:]
         grad_sq_x, grad_sq_y = self.grad_sq(t)
 
-        numerator = grad_x * grad_sq_y - grad_y * grad_sq_x
-        denominator = np.power((np.power(grad_x, 2) + np.power(grad_y, 2)), 1.5)
+        numerator = np.sum(grad_x * grad_sq_y) - np.sum(grad_y * grad_sq_x)
+        denominator = np.sum(np.power((np.power(grad_x, 2) + np.power(grad_y, 2)), 1.5))
+
+        curveature_ = numerator / denominator
+
+        return curveature_
+
+    def compute_curvature_from_curve(self, x: np.ndarray, y: np.ndarray,
+                                     dt: float) -> float:
+        """
+
+        :param x:
+        :param y:
+        :param dt:
+        :return:
+        """
+
+        grad_x = np_grad(x) * (len(x) / dt)
+        grad_y = np_grad(y) * (len(y) / dt)
+        grad_sq_x = np_grad(grad_x) * (len(x) / dt)
+        grad_sq_y = np_grad(grad_y) * (len(y) / dt)
+
+        numerator = np.sum(grad_x * grad_sq_y) - np.sum(grad_y * grad_sq_x)
+        denominator = np.sum(np.power((np.power(grad_x, 2) + np.power(grad_y, 2)), 1.5))
 
         curveature_ = numerator / denominator
 
@@ -334,40 +357,40 @@ class Curve(ABC):
 
         return np.expand_dims(curvature_, 1) * normal
 
-    def generate_evolution_curves(self, t: np.ndarray) -> np.ndarray:
+    def generate_evolution_curves(self, n_iterations: int,
+                                  interval: np.ndarray) -> Sequence[np.ndarray]:
         """
 
-        :param t:
-        :param n_curves:
+        :param n_iterations:
+        :param interval:
         :return:
         """
 
-        # # Compute dt
-        # dt = np.diff(t)[0]
-        #
-        # # Compute the curvature
-        # curvature = self.curvature_s(t)
-        #
-        # # Compute the evolution curve through descent iterations
-        # # s, c_s = self.parametrize_by_arclength(t)
-        # y = self.y_parametrization(t)
-        # evolution_curves = y[2:] - (dt * curvature)
         # Compute dt
-        dt = np.diff(t)[0]
+        dt = np.diff(interval)[0]
+        al = self.arc_length(interval)
+        x = self._generate_x(interval)
+        y = self._generate_x(interval)
+        evolution_curves = [(x, y), ]
+        arc_lengths = [al, ]
 
-        # Compute the curvature
-        curvatures = self.curvature_t(t)
-        normal = self.unit_normal_t(t)[1:]
+        for i in range(n_iterations):
+            # Compute the curvature
+            curvature = self.compute_curvature_from_curve(x=evolution_curves[-1][0],
+                                                          y=evolution_curves[-1][1],
+                                                          dt=dt)
 
-        # Iterate over time
-        curvature_flow = [(curvatures[0] * normal[1]), ]
-        for i in range(1, len(t) - 2):
-            c_t = -dt * curvatures[i] * normal[i]
-            curvature_flow.append(c_t)
+            # Update curve
+            x = x - (dt * curvature)
+            y = y - (dt * curvature)
+            evolution_curves.append((x, y))
 
-        evolution_curve = np.array(curvature_flow)
+            grad_x = np_grad(x) * (len(x) / dt)
+            grad_y = np_grad(y) * (len(y) / dt)
+            al = np.sum(np.expand_dims(np.hypot(grad_x, grad_y), 1))
+            arc_lengths.append(al)
 
-        return evolution_curve
+        return evolution_curves, arc_lengths
 
 
 class Astroid(Curve):
