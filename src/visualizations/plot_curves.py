@@ -87,7 +87,6 @@ def plot_geometric_flow(curve_obj: Curve, interval: np.ndarray, n_iters: int = 1
     """
 
     # Get the flow & arclengths to be plotted
-    curvature_flow = curve_obj.curvature_t(interval)
     evolution_curve, arc_lengths = curve_obj.generate_evolution_curves(
         interval=interval,
         n_iterations=n_iters)
@@ -97,14 +96,15 @@ def plot_geometric_flow(curve_obj: Curve, interval: np.ndarray, n_iters: int = 1
 
     # Plot evolution curve
     # axes[0].scatter(x_axis[2:], evolution_curve, cmap='hot_r', c=interval[2:])
-    [axes[0].scatter(curve[0], evolution_curve[1],
-                     cmap='hot_r', c=interval[2:]) for curve in evolution_curve]
+    [axes[0].scatter(curve[0], curve[1],
+                     cmap='hot_r', c=interval) for curve in evolution_curve]
     axes[0].set_ylabel("Y (t)")
 
     # Plot arc-lengths
-    scatter = axes[2].scatter(interval[2:], arc_lengths, cmap='hot_r', c=interval[2:])
-    axes[2].set_xlabel("Time")
-    axes[2].set_ylabel("Arc Length (t)")
+    scatter = axes[1].scatter(np.arange(len(arc_lengths)), arc_lengths,
+                              cmap='hot_r', c=np.arange(len(arc_lengths)))
+    axes[1].set_xlabel("Time")
+    axes[1].set_ylabel("Arc Length (t)")
 
     cb = fig.colorbar(scatter, ax=axes)
     cb.set_label('Time', labelpad=-40, y=1.05, rotation=0)

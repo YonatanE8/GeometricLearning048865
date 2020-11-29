@@ -317,7 +317,7 @@ class Curve(ABC):
         grad_sq_x = np_grad(grad_x) * (len(x) / dt)
         grad_sq_y = np_grad(grad_y) * (len(y) / dt)
 
-        numerator = np.sum(grad_x * grad_sq_y) - np.sum(grad_y * grad_sq_x)
+        numerator = np.sum((grad_x * grad_sq_y) - (grad_y * grad_sq_x))
         denominator = np.sum(np.power((np.power(grad_x, 2) + np.power(grad_y, 2)), 1.5))
 
         curveature_ = numerator / denominator
@@ -357,6 +357,7 @@ class Curve(ABC):
 
         return np.expand_dims(curvature_, 1) * normal
 
+    # TODO: Fix that
     def generate_evolution_curves(self, n_iterations: int,
                                   interval: np.ndarray) -> Sequence[np.ndarray]:
         """
@@ -370,7 +371,8 @@ class Curve(ABC):
         dt = np.diff(interval)[0]
         al = self.arc_length(interval)
         x = self._generate_x(interval)
-        y = self._generate_x(interval)
+        y = self._generate_y(interval)
+        grad_x = np_grad(x) * (len(x) / dt)
         evolution_curves = [(x, y), ]
         arc_lengths = [al, ]
 
@@ -381,11 +383,11 @@ class Curve(ABC):
                                                           dt=dt)
 
             # Update curve
-            x = x - (dt * curvature)
-            y = y - (dt * curvature)
+            # x = x + (dt * curvature)
+            y = y + (dt * curvature)
             evolution_curves.append((x, y))
 
-            grad_x = np_grad(x) * (len(x) / dt)
+            # grad_x = np_grad(x) * (len(x) / dt)
             grad_y = np_grad(y) * (len(y) / dt)
             al = np.sum(np.expand_dims(np.hypot(grad_x, grad_y), 1))
             arc_lengths.append(al)
