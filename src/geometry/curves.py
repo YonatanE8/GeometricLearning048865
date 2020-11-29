@@ -200,7 +200,7 @@ class Curve(ABC):
         # Compute C(s), remember that ds\dt = ||C'(t)||
         ds_dt = self.grad_norm(t)
         c_s = c_prime * ds_dt * dt
-        c_s = np.cumsum(c_s)
+        c_s = np.cumsum(c_s, axis=0)
 
         return s, c_s
 
