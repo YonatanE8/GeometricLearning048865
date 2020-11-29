@@ -10,21 +10,16 @@ class Curve(ABC):
     A class describing a curve via explicitly describing its x & y parameterizations
     """
 
-    def __init__(self, x_parametrization: Callable, y_parametrization: Callable,
-                 curvature_computation_method: str = 'xy'):
+    def __init__(self, x_parametrization: Callable, y_parametrization: Callable):
         """
         Initialize a curve object
 
         :param x_parametrization:
         :param y_parametrization:
-        :param curvature_computation_method:
         """
-
-        assert curvature_computation_method in ('xy', 'c_prime_sq')
 
         self.x_parametrization = x_parametrization
         self.y_parametrization = y_parametrization
-        self.curvature_computation_method = curvature_computation_method
 
     @staticmethod
     def get_interval(start: float = 0., end: float = 1.,
@@ -200,7 +195,7 @@ class Curve(ABC):
 
         # Compute C'(s(t)) == T(t) & dt
         dt = np.diff(t)
-        c_prime = self.tangent_t(t)
+        c_prime = self.unit_tangent_t(t)
 
         # Compute C(s), remember that ds\dt = ||C'(t)||
         ds_dt = self.grad_norm(t)
@@ -209,7 +204,7 @@ class Curve(ABC):
 
         return s, c_s
 
-    def tangent_t(self, t: np.ndarray) -> np.ndarray:
+    def unit_tangent_t(self, t: np.ndarray) -> np.ndarray:
         """
 
         :param t:
@@ -218,7 +213,6 @@ class Curve(ABC):
 
         # Compute C'
         c_prime_x, c_prime_y = self.grad(t)
-
         c_prime = np.concatenate(
             [np.expand_dims(c_prime_x, 1), np.expand_dims(c_prime_y, 1)], 1
         )
@@ -226,7 +220,7 @@ class Curve(ABC):
         # Handle singularities
         zero_inds = np.where(np.sum(np.abs(c_prime), axis=1) == 0)[0]
         if len(zero_inds):
-            c_prime[zero_inds] = np.ones((len(zero_inds), )) * 1e-6
+            c_prime[zero_inds] = np.ones((len(zero_inds), )) * 1e-8
 
         # Compute the norm
         c_prime_norm = np.expand_dims(np.linalg.norm(c_prime, axis=1), 1)
@@ -236,7 +230,7 @@ class Curve(ABC):
 
         return tangent
 
-    def normal_t(self, t: np.ndarray) -> np.ndarray:
+    def unit_normal_t(self, t: np.ndarray) -> np.ndarray:
         """
 
         :param t:
@@ -244,18 +238,19 @@ class Curve(ABC):
         """
 
         # Get T(t) the unit tangent vector
-        tangent = self.tangent_t(t)
-        #
-        # # N(t) - the unit normal vector == d\dt T(t) \ ||d \ dt T(t)||
+        tangent = self.unit_tangent_t(t)
+
+        # N(t) - the unit normal vector == d\dt T(t) \ ||d \ dt T(t)||
         # dT_dt = np.diff(tangent, axis=0)
-        #
-        # # Handle singularities
+
+        # Handle singularities
         # zero_inds = np.where(np.sum(np.abs(dT_dt), axis=1) == 0)[0]
         # if len(zero_inds):
         #     dT_dt[zero_inds] = np.ones((len(zero_inds), )) * 1e-6
-        #
+
         # dT_dt_norm = np.expand_dims(np.hypot(dT_dt[:, 0], dT_dt[:, 1]), 1)
         # normal = dT_dt / dT_dt_norm
+
         # # For the 2D case we can always use this
         normal = np.concatenate([
             np.expand_dims(-tangent[:, 1], 1),
@@ -264,7 +259,7 @@ class Curve(ABC):
 
         return normal
 
-    def tangent_s(self, t: np.ndarray) -> np.ndarray:
+    def unit_tangent_s(self, t: np.ndarray) -> np.ndarray:
         """
 
         :param t:
@@ -272,7 +267,7 @@ class Curve(ABC):
         """
 
         # Compute T(t)
-        tangent = self.tangent_t(t)
+        tangent = self.unit_tangent_t(t)
 
         # Compute ds/dt
         ds_dt = self.grad_norm(t)
@@ -282,14 +277,14 @@ class Curve(ABC):
 
         return tangent_s
 
-    def normal_s(self, t: np.ndarray) -> np.ndarray:
+    def unit_normal_s(self, t: np.ndarray) -> np.ndarray:
         """
 
         :param t:
         :return:
         """
 
-        tangent = self.tangent_s(t)
+        tangent = self.unit_tangent_s(t)
 
         # N(s) = JT(s), where J = [[0, -1], [1, 0]]
         normal = np.concatenate([
@@ -306,24 +301,14 @@ class Curve(ABC):
         :return:
         """
 
-        if self.curvature_computation_method == 'xy':
-            grad_x, grad_y = self.grad(t)
-            grad_x, grad_y = grad_x[1:], grad_y[1:]
-            grad_sq_x, grad_sq_y = self.grad_sq(t)
+        grad_x, grad_y = self.grad(t)
+        grad_x, grad_y = grad_x[1:], grad_y[1:]
+        grad_sq_x, grad_sq_y = self.grad_sq(t)
 
-            nominator = grad_x * grad_sq_y - grad_y * grad_sq_x
-            denominator = np.power((np.power(grad_x, 2) + np.power(grad_y, 2)), 1.5)
+        nominator = grad_x * grad_sq_y - grad_y * grad_sq_x
+        denominator = np.power((np.power(grad_x, 2) + np.power(grad_y, 2)), 1.5)
 
-            curveature_ = nominator / denominator
-
-        elif self.curvature_computation_method == 'c_prime_sq':
-            normal = self.normal_t(t)
-            grad_sq_x, grad_sq_y = self.grad_sq(t)
-            grads_sq = np.concatenate(
-                [np.expand_dims(grad_sq_x, 1), np.expand_dims(grad_sq_y, 1)], 1
-            )
-
-            curveature_ = normal @ grads_sq.T
+        curveature_ = nominator / denominator
 
         return curveature_
 
@@ -335,26 +320,27 @@ class Curve(ABC):
         """
 
         # Get N(s)
-        n_s = self.normal_s(t)
+        n_s = self.unit_normal_s(t)
 
         # Estimate C''(s), while remembering that C'(s) == T(t)
-        c_prime_s = self.tangent_t(t)
+        c_prime_s = self.unit_tangent_t(t)
         c_prime_prime_s = np.diff(c_prime_s, axis=0)
 
         # k(s) = <N(s), C''(s)>
-        curvature_s = np.matmul(n_s, c_prime_prime_s.T)
+        curvature_s = np.concatenate([
+            np.dot(n_s[i, None, :], c_prime_prime_s.T[:, i, None])
+            for i in range(n_s.shape[0])], 0).squeeze()
 
+        return curvature_s
 
-        return curveature_
-
-    def tangent_prime(self, t: np.ndarray) -> np.ndarray:
+    def tangent_prime_t(self, t: np.ndarray) -> np.ndarray:
         """
 
         :param t:
         :return:
         """
 
-        normal = self.normal_t(t)
+        normal = self.unit_normal_t(t)[1:, :]
         curvature_ = self.curvature_t(t)
 
         return np.expand_dims(curvature_, 1) * normal

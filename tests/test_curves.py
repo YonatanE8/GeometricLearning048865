@@ -20,6 +20,16 @@ def half_circle_curve():
     return curve, interval
 
 
+@pytest.fixture
+def ellipse_curve():
+    a = 0.5
+    b = 1
+    curve = curves.Ellipse(a=a, b=b)
+    interval = curve.get_interval(start=-1, end=1, n_points=1000)
+
+    return curve, interval
+
+
 class TestCurve:
     def test_generate_curve(self, sin_curve):
         curve, _ = sin_curve
@@ -79,7 +89,11 @@ class TestCurve:
 
     def test_tangent(self, sin_curve):
         curve, interval = sin_curve
-        tangent = curve.tangent_t(interval)
+        tangent = curve.unit_tangent_t(interval)
+        normal = curve.unit_normal_t(interval)
+        # x = curve.x_parametrization(interval)
+        # y = curve.y_parametrization(interval)
+        # xy = np.concatenate((np.expand_dims(x, 1), np.expand_dims(y, 1)), 1)
 
         # Regular curve should not have any singularities
         assert len(np.where(np.sum(np.abs(tangent), 1) == 0)[0]) == 0
@@ -92,9 +106,16 @@ class TestCurve:
                       np.ones((tangent.shape[0], ))) == \
             pytest.approx(0, abs=1e-8)
 
+        # The direction of the tangent at each point should be orthogonal to the
+        # direction of the normal
+        dot_product = np.sum([np.dot(tangent[i, None, :], normal.T[:, i, None])
+                              for i in range(tangent.shape[0] - 1)])
+
+        assert np.sum(dot_product) == pytest.approx(0, abs=1e-8)
+
     def test_normal(self, sin_curve):
         curve, interval = sin_curve
-        normal = curve.normal_t(interval)
+        normal = curve.unit_normal_t(interval)
         x = curve.x_parametrization(interval)
         y = curve.y_parametrization(interval)
         xy = np.concatenate((np.expand_dims(x, 1), np.expand_dims(y, 1)), 1)
@@ -107,39 +128,27 @@ class TestCurve:
                       np.ones((normal.shape[0], ))) == \
             pytest.approx(0, abs=1e-8)
 
-        # Normals should be orthogonal to the original vectors
-        dot_product = np.sum([np.dot(xy[(i + 1), None, :], normal.T[:, i, None])
-                              for i in range(xy.shape[0] - 1)])
+    def test_curvature(self, ellipse_curve):
+        curve, interval = ellipse_curve
 
-        assert dot_product == pytest.approx(0, abs=1e-8)
-
-        # assert np.sum(np.matmul(xy, normal.T)) == pytest.approx(0, abs=1e-8)
-
-    def test_curvature(self, sin_curve):
-        curve, interval = sin_curve
-
-        # Compute the curvature using the 'xy' method
-        xy_curvature = curve.curvature_t(interval)
-
-        # Compute the curvature using the 'c_prime_sq' method
-        c_curvature = curve.curvature_t(interval)
+        # Compute the curvature
+        curvature = curve.curvature_t(interval)
 
         # Assert shape
-        assert xy_curvature.shape == (len(interval) - 2, )
+        assert curvature.shape == (len(interval) - 2, )
 
-        # Both computations must be identical
-        comp_diff = np.sum(np.abs(c_curvature - xy_curvature))
-        assert comp_diff == pytest.approx(0, abs=1e-8)
+        # No non-positive curvatures in an ellipse
+        assert np.min(curvature) > 0
 
     def test_tangent_prime(self, sin_curve):
         curve, interval = sin_curve
-        tangent_prime = curve.tangent_prime(interval)
+        tangent_prime = curve.tangent_prime_t(interval)
 
         # Assert shape
         assert tangent_prime.shape == ((len(interval) - 2), 2)
 
         # tangent_prime should be orthogonal to the tangent
-        tangent = curve.tangent_t(interval)
+        tangent = curve.unit_tangent_t(interval)
         tangent = tangent[1:, :]
         inner_product = np.sum([np.dot(tangent[i, None, :], tangent_prime.T[:, i, None])
                                 for i in range(tangent.shape[0])])

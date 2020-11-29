@@ -1,5 +1,6 @@
 from src import PROJECT_ROOT
-from src.visualizations.plot_curves import plot_geometric_flow
+from src.visualizations.plot_curves import (plot_geometric_flow,
+                                            plot_curves_normals_vs_tangent)
 
 import os
 import src.geometry.curves as curves
@@ -63,8 +64,8 @@ params = [
 #     title="Cusp", save_path=save_path)
 
 start = 0
-end = 10000
-n_points = 1000
+end = 100
+n_points = 100
 a = 2
 b = 4
 c = 2
@@ -80,5 +81,26 @@ interval = curve_obj.get_interval(start=start, end=end, n_points=n_points)
 
 save_path = os.path.join(data_dir, 'EllipseGeometricFlow.png')
 title = "Ellipse: Evolution Curve, Mean Curvature Flow & Arc Length vs. Time"
-plot_geometric_flow(curve_obj=curve_obj, interval=interval, title=title,
-                    save_path=save_path)
+# plot_geometric_flow(curve_obj=curve_obj, interval=interval, title=title,
+#                     save_path=save_path)
+
+plot_curves_normals_vs_tangent(curve_obj=curve_obj, interval=interval)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
