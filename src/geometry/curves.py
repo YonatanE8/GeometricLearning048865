@@ -240,17 +240,6 @@ class Curve(ABC):
         # Get T(t) the unit tangent vector
         tangent = self.unit_tangent_t(t)
 
-        # N(t) - the unit normal vector == d\dt T(t) \ ||d \ dt T(t)||
-        # dT_dt = np.diff(tangent, axis=0)
-
-        # Handle singularities
-        # zero_inds = np.where(np.sum(np.abs(dT_dt), axis=1) == 0)[0]
-        # if len(zero_inds):
-        #     dT_dt[zero_inds] = np.ones((len(zero_inds), )) * 1e-6
-
-        # dT_dt_norm = np.expand_dims(np.hypot(dT_dt[:, 0], dT_dt[:, 1]), 1)
-        # normal = dT_dt / dT_dt_norm
-
         # # For the 2D case we can always use this
         normal = np.concatenate([
             np.expand_dims(-tangent[:, 1], 1),
